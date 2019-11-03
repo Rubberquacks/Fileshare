@@ -24,6 +24,8 @@
         <!-- do not allow (cloud) backup for now, until thinking about compatibility with privacy concerns
         by default, nearly all app data files and preferences would be backup up by enabling this
         https://developer.android.com/guide/topics/data/autobackup#EnablingAutoBackup
+        `getNoBackupFilesDir` could be used to prevent backup of saved files regardless of this setting:
+        https://developer.android.com/reference/android/content/Context.html#getNoBackupFilesDir()
         -->
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
