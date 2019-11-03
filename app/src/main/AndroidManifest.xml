@@ -21,7 +21,11 @@
 
 
     <application
-        android:allowBackup="true"
+        <!-- do not allow (cloud) backup for now, until thinking about compatibility with privacy concerns
+        by default, nearly all app data files and preferences would be backup up by enabling this
+        https://developer.android.com/guide/topics/data/autobackup#EnablingAutoBackup
+        -->
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
