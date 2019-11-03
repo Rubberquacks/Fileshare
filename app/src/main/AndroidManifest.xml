@@ -2,6 +2,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.akampf.fileshare">
 
+    <!-- fine location, access wifi state, change wifi state and internet are all needed for p2p functionality
+    "Wi-Fi P2P doesn't require an internet connection, but it does use standard Java sockets, which requires the INTERNET permission."
+    https://developer.android.com/training/connect-devices-wirelessly/wifi-direct#permissions
+     -->
+    <uses-permission
+        android:required="true"
+        android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission
+        android:required="true"
+        android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission
+        android:required="true"
+        android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission
+        android:required="true"
+        android:name="android.permission.INTERNET" />
+
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
