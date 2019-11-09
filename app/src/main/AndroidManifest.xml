@@ -5,7 +5,11 @@
     <!-- fine location, access wifi state, change wifi state and internet are all needed for p2p functionality
     "Wi-Fi P2P doesn't require an internet connection, but it does use standard Java sockets, which requires the INTERNET permission."
     https://developer.android.com/training/connect-devices-wirelessly/wifi-direct#permissions
-     -->
+    oddly, here:
+    https://developer.android.com/guide/topics/connectivity/wifip2p#setup
+    there are also the access network state and change network state permissions listed as required for wifi direct
+    IN CASE OF PROBLEMS: these could be missing
+    -->
     <uses-permission
         android:required="true"
         android:name="android.permission.ACCESS_FINE_LOCATION" />
