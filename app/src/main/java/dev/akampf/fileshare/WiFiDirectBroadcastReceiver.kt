@@ -19,14 +19,8 @@ class WiFiDirectBroadcastReceiver(
 ) : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.i(LOGGING_TAG,"onreceive broadcast receiver")
-        // TODO look up why example set type to not optional string without null check but ide says intent.action is of type String?
-        // check if intent.action is not null because it is of type "String?"
-        if (intent.action != null) {
-            return
-        }
-        // now we are sure it is not null so we cast String? to not optional type String
-        val action: String = intent.action as String
+
+        val action: String? = intent.action
         when (action) {
             WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
                 // Check to see if Wi-Fi is enabled and notify appropriate activity
@@ -52,6 +46,8 @@ class WiFiDirectBroadcastReceiver(
             WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
                 // Respond to this device's wifi state changing
             }
+            // different action or action is null
+            else -> {}
         }
     }
 }
