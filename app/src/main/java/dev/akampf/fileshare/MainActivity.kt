@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.database.Cursor
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pManager
@@ -25,6 +26,14 @@ class MainActivity : AppCompatActivity() {
         getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
     }
 
+    val intentFilter = IntentFilter().apply {
+        addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
+        addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
+        addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
+        addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
+    }
+
+
     var mChannel: WifiP2pManager.Channel? = null
     var receiver: BroadcastReceiver? = null
 
@@ -38,8 +47,9 @@ class MainActivity : AppCompatActivity() {
 
         mChannel = manager?.initialize(this, mainLooper, null)
         mChannel?.also { channel ->
-            // TODO look up why example set type to not optional WifiP2pManager in receiving WiFiDirectBroadcastReceiver class but ide says manager is of type WifiP2pManager?
-            // if mChannel was not null, we are sure manager was not null, too, because of the manager?.initialize() call above only being executed then. So cast it to not optional type
+            // if mChannel was not null, we are already sure manager was not null, too, because of the manager?.initialize() call
+            // above only being executed then. So we cast it to not optional type
+            // TODO report to Kotlin?
             receiver = WiFiDirectBroadcastReceiver(manager as WifiP2pManager, channel, this)
         }
 
@@ -49,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     /* register the broadcast receiver with the intent values to be matched */
     override fun onResume() {
         super.onResume()
-        mReceiver?.also { receiver ->
+        receiver?.also { receiver ->
             registerReceiver(receiver, intentFilter)
         }
     }
@@ -57,7 +67,7 @@ class MainActivity : AppCompatActivity() {
     /* unregister the broadcast receiver */
     override fun onPause() {
         super.onPause()
-        mReceiver?.also { receiver ->
+        receiver?.also { receiver ->
             unregisterReceiver(receiver)
         }
     }
