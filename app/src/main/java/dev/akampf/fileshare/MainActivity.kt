@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        Log.i(LOGGING_TAG, "Hello World!")
+        Log.v(LOGGING_TAG, "Hello World!")
 
 
         mChannel = manager?.initialize(this, mainLooper, null)
@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity() {
 
 
     /**
-     * Fires an intent to spin up the "file chooser" UI and select an image.
+     * Fires an intent to spin up the "file chooser" UI and select a file.
      */
     private fun performFileSearch() {
 
@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
     /** Called when the user taps the Send button */
     fun sendMessage(view: View) {
         // Do something in response to button
-        Log.e(LOGGING_TAG, "button pressed")
+        Log.v(LOGGING_TAG, "button pressed")
         val editText = findViewById<TextView>(R.id.textView)
         editText.text = "blaaaa"
         this.performFileSearch()
@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
             // provided to this method as a parameter.
             // Pull that URI using resultData.getData().
             resultData?.data?.also { uri ->
-                Log.i(LOGGING_TAG, "Uri: $uri")
+                Log.v(LOGGING_TAG, "Uri: $uri")
                 this.dumpImageMetaData(uri)
                 //showImage(uri)
             }
@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity() {
                 // provider-specific, and might not necessarily be the file name.
                 val displayName: String =
                     it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
-                Log.i(LOGGING_TAG, "Display Name: $displayName")
+                Log.v(LOGGING_TAG, "Display Name: $displayName")
 
                 val sizeIndex: Int = it.getColumnIndex(OpenableColumns.SIZE)
                 // If the size is unknown, the value stored is null.  But since an
@@ -158,7 +158,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     "Unknown"
                 }
-                Log.i(LOGGING_TAG, "Size: $size")
+                Log.v(LOGGING_TAG, "Size: $size")
             }
         }
     }
