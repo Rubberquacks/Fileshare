@@ -22,11 +22,11 @@ private const val LOGGING_TAG: String = "own_logs"
 
 class MainActivity : AppCompatActivity() {
 
-	val manager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
+	val mWiFiDirectManager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
 		getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
 	}
 
-	val intentFilter = IntentFilter().apply {
+	val mWiFiDirectIntentFilter = IntentFilter().apply {
 		addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
 		addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
 		addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
@@ -35,15 +35,33 @@ class MainActivity : AppCompatActivity() {
 
 
 	var mChannel: WifiP2pManager.Channel? = null
-	var receiver: BroadcastReceiver? = null
+	var mWiFiDirectBroadcastReceiver: BroadcastReceiver? = null
 
 	// can we distinguish disabled and unavailable? is it unavailable on spported devices sometimes even?
-	var wifiDirectEnabled: Boolean = false
+	var mWiFiDirectEnabled: Boolean = false
 		set(value) {
 			field = value
 			val wifiDirectStateTextView = findViewById<TextView>(R.id.wifiDirectStatus)
 			wifiDirectStateTextView.text = value.toString()
+            discoverWiFiDirectPeers()
 		}
+
+    private fun discoverWiFiDirectPeers() {
+        mWiFiDirectManager?.discoverPeers(mChannel, object : WifiP2pManager.ActionListener {
+
+            // success initiating the scan for peers
+            override fun onSuccess() {
+                Log.i(LOGGING_TAG, "initiating peer discovery successful")
+                // In the future, if the discovery process succeeds and detects peers, the system broadcasts the
+                // WIFI_P2P_PEERS_CHANGED_ACTION intent, which we can listen for in a broadcast receiver to then obtain a list of peers.
+            }
+
+            // failed to initiate the scan for peers
+            override fun onFailure(reasonCode: Int) {
+                Log.w(LOGGING_TAG, "initiating peer discovery failed")
+            }
+        })
+    }
 
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,12 +70,12 @@ class MainActivity : AppCompatActivity() {
 		Log.v(LOGGING_TAG, "Hello World!")
 
 
-		mChannel = manager?.initialize(this, mainLooper, null)
+		mChannel = mWiFiDirectManager?.initialize(this, mainLooper, null)
 		mChannel?.also { channel ->
 			// if mChannel was not null, we are already sure manager was not null, too, because of the manager?.initialize() call
 			// above only being executed then. So we cast it to not optional type with !!
 			// TODO report to Kotlin?
-			receiver = WiFiDirectBroadcastReceiver(manager!!, channel, this)
+			mWiFiDirectBroadcastReceiver = WiFiDirectBroadcastReceiver(mWiFiDirectManager!!, channel, this)
 		}
 
 	}
@@ -66,15 +84,15 @@ class MainActivity : AppCompatActivity() {
 	/* register the broadcast receiver with the intent values to be matched */
 	override fun onResume() {
 		super.onResume()
-		receiver?.also { receiver ->
-			registerReceiver(receiver, intentFilter)
+		mWiFiDirectBroadcastReceiver?.also { receiver ->
+			registerReceiver(receiver, mWiFiDirectIntentFilter)
 		}
 	}
 
 	/* unregister the broadcast receiver */
 	override fun onPause() {
 		super.onPause()
-		receiver?.also { receiver ->
+		mWiFiDirectBroadcastReceiver?.also { receiver ->
 			unregisterReceiver(receiver)
 		}
 	}

@@ -33,12 +33,12 @@ class WiFiDirectBroadcastReceiver(
 					WifiP2pManager.WIFI_P2P_STATE_ENABLED -> {
 						// Wifi P2P is enabled
 						Log.i(LOGGING_TAG ,"WiFi Direct is ENABLED")
-						activity.wifiDirectEnabled = true
+						activity.mWiFiDirectEnabled = true
 					}
 					WifiP2pManager.WIFI_P2P_STATE_DISABLED -> {
 						// Wi-Fi P2P is not enabled
 						Log.i(LOGGING_TAG,"WiFi Direct is DISABLED")
-						activity.wifiDirectEnabled = false
+						activity.mWiFiDirectEnabled = false
 					}
 					else -> {
 						// the EXTRA_WIFI_STATE extra was not found (state == -1) or the state is neither
