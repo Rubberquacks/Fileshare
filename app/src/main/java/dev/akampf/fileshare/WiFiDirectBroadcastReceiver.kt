@@ -13,50 +13,56 @@ private const val LOGGING_TAG: String = "own_logs"
  * A BroadcastReceiver that handles / notifies of important Wi-Fi p2p events.
  */
 class WiFiDirectBroadcastReceiver(
-    private val manager: WifiP2pManager,
-    private val channel: WifiP2pManager.Channel,
-    private val activity: MainActivity
+	private val manager: WifiP2pManager,
+	private val channel: WifiP2pManager.Channel,
+	private val activity: MainActivity
 ) : BroadcastReceiver() {
 
-    override fun onReceive(context: Context, intent: Intent) {
+	override fun onReceive(context: Context, intent: Intent) {
 
-        val action: String? = intent.action
-        when (action) {
-            WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
-                // Check to see if Wi-Fi Direct is enabled and notify appropriate activity
-                val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
-                when (state) {
-                    WifiP2pManager.WIFI_P2P_STATE_ENABLED -> {
-                        // Wifi P2P is enabled
-                        Log.i(LOGGING_TAG ,"WiFi Direct is ENABLED")
-                    }
-                    WifiP2pManager.WIFI_P2P_STATE_DISABLED -> {
-                        // Wi-Fi P2P is not enabled
-                        Log.i(LOGGING_TAG,"WiFi Direct is DISABLED")
-                    }
-                    else -> {
-                        // the EXTRA_WIFI_STATE extra was not found (state == -1) or the state is neither
-                        // enabled (state == 2) nor disabled (state == 1), which should be the only 2 options when
-                        // the extra is present
-                        // probably the extra also should be present all the time, when receiving the Wifi Direct
-                        // state changed action
-                        Log.w(LOGGING_TAG, "WIFI_P2P_STATE_CHANGED_ACTION received but not an EXTRA_WIFI_STATE " +
-                                "which indicates enabled or disabled state!\nExtra value = $state")
-                    }
-                }
+		val action: String? = intent.action
+		when (action) {
+			WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
+				// Check to see if Wi-Fi Direct is enabled and notify appropriate activity
 
-            }
-            WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
-                // Call WifiP2pManager.requestPeers() to get a list of current peers
-            }
-            WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
-                // Respond to new connection or disconnections
-            }
-            WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
-                // Respond to this device's wifi state changing
-            }
-            // different action or action is null
-            else -> {}
-        }
-    }
+				// TODO in emulator and some real devices on activity resume and wifi enabled (only when connected?) the wifi direct state
+                // constantly toggles between on and off until wifi is disabled, then enabling it (and connecting to a network) does not
+                // lead to the toggling behavior again
+				val state: Int = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
+				when (state) {
+					WifiP2pManager.WIFI_P2P_STATE_ENABLED -> {
+						// Wifi P2P is enabled
+						Log.i(LOGGING_TAG ,"WiFi Direct is ENABLED")
+						activity.wifiDirectEnabled = true
+					}
+					WifiP2pManager.WIFI_P2P_STATE_DISABLED -> {
+						// Wi-Fi P2P is not enabled
+						Log.i(LOGGING_TAG,"WiFi Direct is DISABLED")
+						activity.wifiDirectEnabled = false
+					}
+					else -> {
+						// the EXTRA_WIFI_STATE extra was not found (state == -1) or the state is neither
+						// enabled (state == 2) nor disabled (state == 1), which should be the only 2 options when
+						// the extra is present
+						// probably the extra also should be present all the time, when receiving the Wifi Direct
+						// state changed action
+						Log.w(LOGGING_TAG, "WIFI_P2P_STATE_CHANGED_ACTION received but not an EXTRA_WIFI_STATE " +
+								"which indicates enabled or disabled state!\nExtra value = $state")
+					}
+				}
+
+			}
+			WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
+				// Call WifiP2pManager.requestPeers() to get a list of current peers
+			}
+			WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+				// Respond to new connection or disconnections
+			}
+			WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
+				// Respond to this device's wifi state changing
+			}
+			// different action or action is null
+			else -> {}
+		}
+	}
 }
