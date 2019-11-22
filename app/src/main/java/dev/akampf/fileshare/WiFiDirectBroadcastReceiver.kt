@@ -53,7 +53,9 @@ class WiFiDirectBroadcastReceiver(
 
 			}
 			WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
+				// TODO
 				// Call WifiP2pManager.requestPeers() to get a list of current peers
+				// use activity.wiFiDirectPeersChanged() or similar to notify of changed peers
 			}
 			WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
 				// Respond to new connection or disconnections
