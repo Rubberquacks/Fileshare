@@ -22,43 +22,56 @@ private const val LOGGING_TAG: String = "own_logs"
 
 class MainActivity : AppCompatActivity() {
 
-	val mWiFiDirectManager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
+	private val mWiFiDirectManager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
 		getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
 	}
 
-	val mWiFiDirectIntentFilter = IntentFilter().apply {
-		addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
-		addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
-		addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
-		addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
+	private val mWiFiDirectIntentFilter = IntentFilter().apply {
+        // Indicates a change in the Wi-Fi P2P status.
+        addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
+        // Indicates a change in the list of available peers.
+        addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
+        // Indicates the state of Wi-Fi P2P connectivity has changed.
+        addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
+        // Indicates this device's details have changed.
+        addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
 	}
 
 
-	var mChannel: WifiP2pManager.Channel? = null
-	var mWiFiDirectBroadcastReceiver: BroadcastReceiver? = null
+	private var mChannel: WifiP2pManager.Channel? = null
+	private var mWiFiDirectBroadcastReceiver: BroadcastReceiver? = null
 
 	// can we distinguish disabled and unavailable? is it unavailable on spported devices sometimes even?
 	var mWiFiDirectEnabled: Boolean = false
 		set(value) {
 			field = value
 			val wifiDirectStateTextView = findViewById<TextView>(R.id.wifiDirectStatus)
-			wifiDirectStateTextView.text = value.toString()
+            val wifiDirectStatePretty = if (value) "Enabled" else "Disabled"
+			wifiDirectStateTextView.text = "WiFi Direct: $wifiDirectStatePretty"
             discoverWiFiDirectPeers()
 		}
 
+
     private fun discoverWiFiDirectPeers() {
+
+        // This only initiates the discovery, this method immediately returns.
+        // The discovery remains active until a connection is initiated or a p2p group is formed
         mWiFiDirectManager?.discoverPeers(mChannel, object : WifiP2pManager.ActionListener {
 
             // success initiating the scan for peers
             override fun onSuccess() {
-                Log.i(LOGGING_TAG, "initiating peer discovery successful")
+                Log.i(LOGGING_TAG, "Initiating peer discovery successful")
                 // In the future, if the discovery process succeeds and detects peers, the system broadcasts the
                 // WIFI_P2P_PEERS_CHANGED_ACTION intent, which we can listen for in a broadcast receiver to then obtain a list of peers.
             }
 
             // failed to initiate the scan for peers
             override fun onFailure(reasonCode: Int) {
-                Log.w(LOGGING_TAG, "initiating peer discovery failed")
+                // TODO handle reason
+                // reason 	int: The reason for failure could be one of WifiP2pManager.P2P_UNSUPPORTED, WifiP2pManager.ERROR or WifiP2pManager.BUSY
+                // https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.ActionListener.html#onFailure(int)
+
+                Log.w(LOGGING_TAG, "Initiating peer discovery failed")
             }
         })
     }
@@ -102,7 +115,7 @@ class MainActivity : AppCompatActivity() {
 	/**
 	 * Fires an intent to spin up the "file chooser" UI and select a file.
 	 */
-	private fun performFileSearch() {
+	private fun getOpenableFilePickedByUser() {
 
 		// ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
 		// browser.
@@ -126,9 +139,9 @@ class MainActivity : AppCompatActivity() {
 	fun sendMessage(view: View) {
 		// Do something in response to button
 		Log.v(LOGGING_TAG, "button pressed")
-		val editText = findViewById<TextView>(R.id.textView)
-		editText.text = "blaaaa"
-		this.performFileSearch()
+		this.getOpenableFilePickedByUser()
+        val editText = findViewById<TextView>(R.id.textView)
+        editText.text = "file chooser initiated"
 
 	}
 
