@@ -20,16 +20,14 @@ class WiFiDirectBroadcastReceiver(
 
 	override fun onReceive(context: Context, intent: Intent) {
 
-		val action: String? = intent.action
-		when (action) {
+		when (intent.action) {
 			WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
 				// Check to see if Wi-Fi Direct is enabled and notify appropriate activity
 
 				// TODO in emulator and some real devices on activity resume and wifi enabled (only when connected?) the wifi direct state
                 // constantly toggles between on and off until wifi is disabled, then enabling it (and connecting to a network) does not
                 // lead to the toggling behavior again
-				val state: Int = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
-				when (state) {
+				when (val wiFiDirectState: Int = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)) {
 					WifiP2pManager.WIFI_P2P_STATE_ENABLED -> {
 						// Wifi P2P is enabled
 						Log.i(LOGGING_TAG ,"WiFi Direct is ENABLED")
@@ -47,7 +45,7 @@ class WiFiDirectBroadcastReceiver(
 						// probably the extra also should be present all the time, when receiving the Wifi Direct
 						// state changed action
 						Log.w(LOGGING_TAG, "WIFI_P2P_STATE_CHANGED_ACTION received but not an EXTRA_WIFI_STATE " +
-								"which indicates enabled or disabled state!\nExtra value = $state")
+								"which indicates enabled or disabled state!\nExtra value = $wiFiDirectState")
 					}
 				}
 
