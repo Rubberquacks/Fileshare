@@ -13,9 +13,9 @@ private const val LOGGING_TAG: String = "own_logs"
  * A BroadcastReceiver that handles / notifies of important Wi-Fi p2p events.
  */
 class WiFiDirectBroadcastReceiver(
-	private val manager: WifiP2pManager,
-	private val channel: WifiP2pManager.Channel,
-	private val activity: MainActivity
+	private val mWiFiDirectManager: WifiP2pManager,
+	private val mWiFiDirectChannel: WifiP2pManager.Channel,
+	private val mMainActivity: MainActivity
 ) : BroadcastReceiver() {
 
 	override fun onReceive(context: Context, intent: Intent) {
@@ -33,12 +33,12 @@ class WiFiDirectBroadcastReceiver(
 					WifiP2pManager.WIFI_P2P_STATE_ENABLED -> {
 						// Wifi P2P is enabled
 						Log.i(LOGGING_TAG ,"WiFi Direct is ENABLED")
-						activity.mWiFiDirectEnabled = true
+						mMainActivity.mWiFiDirectEnabled = true
 					}
 					WifiP2pManager.WIFI_P2P_STATE_DISABLED -> {
 						// Wi-Fi P2P is not enabled
 						Log.i(LOGGING_TAG,"WiFi Direct is DISABLED")
-						activity.mWiFiDirectEnabled = false
+						mMainActivity.mWiFiDirectEnabled = false
 					}
 					else -> {
 						// the EXTRA_WIFI_STATE extra was not found (state == -1) or the state is neither
@@ -53,7 +53,11 @@ class WiFiDirectBroadcastReceiver(
 
 			}
 			WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
-				// TODO
+				val peerListListener: WifiP2pManager.PeerListListener = WifiP2pManager.PeerListListener { peerList ->
+					mMainActivity.wiFiDirectPeerListDiscoveryFinished(peerList)
+				}
+
+				mWiFiDirectManager.requestPeers(mWiFiDirectChannel) { peerList -> mMainActivity.wiFiDirectPeerListDiscoveryFinished(peerList) }
 				// Call WifiP2pManager.requestPeers() to get a list of current peers
 				// use activity.wiFiDirectPeersChanged() or similar to notify of changed peers
 			}
