@@ -43,12 +43,12 @@ class MainActivity : AppCompatActivity() {
 
 	// can we distinguish disabled and unavailable? is it unavailable on spported devices sometimes even?
 	var mWiFiDirectEnabled: Boolean = false
-		set(value) {
-			field = value
+		set(wifiDirectEnabled) {
+			field = wifiDirectEnabled
 			val wifiDirectStateTextView = findViewById<TextView>(R.id.wifiDirectStatus)
-            val wifiDirectStatePretty = if (value) "Enabled" else "Disabled"
+            val wifiDirectStatePretty = if (wifiDirectEnabled) "Enabled" else "Disabled"
 			wifiDirectStateTextView.text = "WiFi Direct: $wifiDirectStatePretty"
-            discoverWiFiDirectPeers()
+            if (wifiDirectEnabled) discoverWiFiDirectPeers()
 		}
 
 
