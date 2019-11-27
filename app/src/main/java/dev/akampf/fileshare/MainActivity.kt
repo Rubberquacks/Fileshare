@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
 	private var mChannel: WifiP2pManager.Channel? = null
 	private var mWiFiDirectBroadcastReceiver: BroadcastReceiver? = null
 
-	// can we distinguish disabled and unavailable? is it unavailable on spported devices sometimes even?
+	// can we distinguish disabled and unavailable? is it unavailable on supported devices sometimes even?
 	var mWiFiDirectEnabled: Boolean = false
 		set(wifiDirectEnabled) {
 			field = wifiDirectEnabled
@@ -119,7 +119,8 @@ class MainActivity : AppCompatActivity() {
 	}
 
 
-
+	// TODO consider using ACTION_GET_CONTENT because we only need a copy and not permanent access to the file if it changes and/or modify the file and write it back
+	// https://developer.android.com/guide/topics/providers/document-provider#client
 	/**
 	 * Fires an intent to spin up the "file chooser" UI and select a file.
 	 */
@@ -154,6 +155,8 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
+		// TODO linter says we should call the superclass here, but android example does not show it
+		// https://developer.android.com/training/data-storage/shared/documents-files#perform-operations
 
 		// The ACTION_OPEN_DOCUMENT intent was sent with the request code
 		// READ_REQUEST_CODE. If the request code seen here doesn't match, it's the
