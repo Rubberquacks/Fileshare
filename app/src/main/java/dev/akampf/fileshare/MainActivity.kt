@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.database.Cursor
 import android.net.Uri
+import android.net.wifi.p2p.WifiP2pDeviceList
 import android.net.wifi.p2p.WifiP2pManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -50,6 +51,13 @@ class MainActivity : AppCompatActivity() {
 			wifiDirectStateTextView.text = "WiFi Direct: $wifiDirectStatePretty"
             if (wifiDirectEnabled) discoverWiFiDirectPeers()
 		}
+
+
+	fun wiFiDirectPeerListDiscoveryFinished(discoveredPeerList: WifiP2pDeviceList) {
+		Log.i(LOGGING_TAG, discoveredPeerList.toString())
+
+
+	}
 
 
     private fun discoverWiFiDirectPeers() {
