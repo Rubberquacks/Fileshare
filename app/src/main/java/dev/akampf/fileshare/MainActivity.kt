@@ -1,10 +1,12 @@
 package dev.akampf.fileshare
 
+import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDeviceList
@@ -15,6 +17,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 
 
 private const val READ_REQUEST_CODE: Int = 42
@@ -55,10 +58,24 @@ class MainActivity : AppCompatActivity() {
 
 	fun wiFiDirectPeerListDiscoveryFinished(discoveredPeerList: WifiP2pDeviceList) {
 		Log.i(LOGGING_TAG, discoveredPeerList.toString())
-
-
 	}
 
+
+	private fun haveFineLocationPermissionCurrently(): Boolean {
+		return havePermissionCurrently(Manifest.permission.ACCESS_FINE_LOCATION)
+	}
+
+	/**
+	 * If MainActivity currently has android permission.
+	 *
+	 * @param androidManifestPermission String in the Android.manifest.* namespace.
+	 * @return if permission is currently available
+	 * @see haveFineLocationPermissionCurrently
+	 */
+	private fun havePermissionCurrently(androidManifestPermission: String): Boolean {
+		return ContextCompat.checkSelfPermission(this, androidManifestPermission) != PackageManager.PERMISSION_GRANTED
+
+	}
 
     private fun discoverWiFiDirectPeers() {
 
