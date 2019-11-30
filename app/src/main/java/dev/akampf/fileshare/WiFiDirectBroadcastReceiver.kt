@@ -51,13 +51,10 @@ class WiFiDirectBroadcastReceiver(
 
 			}
 			WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
-				val peerListListener: WifiP2pManager.PeerListListener = WifiP2pManager.PeerListListener { peerList ->
-					mMainActivity.wiFiDirectPeerListDiscoveryFinished(peerList)
-				}
+				// The discovery finished, now we can request a list of current peers, note that it might be empty!
+				// When this asynchronous method has the results, we notify we main activity and pass the peer list to it.
+				mWiFiDirectManager.requestPeers(mWiFiDirectChannel) { peerList -> mMainActivity.notifyWiFiDirectPeerListDiscoveryFinished(peerList) }
 
-				mWiFiDirectManager.requestPeers(mWiFiDirectChannel) { peerList -> mMainActivity.wiFiDirectPeerListDiscoveryFinished(peerList) }
-				// Call WifiP2pManager.requestPeers() to get a list of current peers
-				// use activity.wiFiDirectPeersChanged() or similar to notify of changed peers
 			}
 			WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
 				// Respond to new connection or disconnections

@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Fileshare</string>
+    <string name="wifi_direct_enabled">WiFi Direct: Enabled</string>
+    <string name="wifi_direct_disabled">WiFi Direct: Disabled</string>
+    <string name="open_file">Open File</string>
+    <string name="wifi_direct_unknown_status">WiFi Direct: Unknown Status</string>
 </resources>

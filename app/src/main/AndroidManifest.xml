@@ -1,48 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="dev.akampf.fileshare">
+	package="dev.akampf.fileshare">
 
-    <!-- fine location, access wifi state, change wifi state and internet are all needed for p2p functionality
-    "Wi-Fi P2P doesn't require an internet connection, but it does use standard Java sockets, which requires the INTERNET permission."
-    https://developer.android.com/training/connect-devices-wirelessly/wifi-direct#permissions
-    oddly, here:
-    https://developer.android.com/guide/topics/connectivity/wifip2p#setup
-    there are also the access network state and change network state permissions listed as required for wifi direct
-    IN CASE OF PROBLEMS: these could be missing
-    -->
-    <uses-permission
-        android:required="true"
-        android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission
-        android:required="true"
-        android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission
-        android:required="true"
-        android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission
-        android:required="true"
-        android:name="android.permission.INTERNET" />
+	<!-- fine location, access wifi state, change wifi state and internet are all needed for p2p functionality
+	"Wi-Fi P2P doesn't require an internet connection, but it does use standard Java sockets, which requires the INTERNET permission."
+	https://developer.android.com/training/connect-devices-wirelessly/wifi-direct#permissions
+	Oddly, here:
+	https://developer.android.com/guide/topics/connectivity/wifip2p#setup
+	there are also the access network state and change network state permissions listed as required for wifi direct
+	IN CASE OF PROBLEMS: these could be missing
+	-->
 
-    <!-- do not allow (cloud) backup for now, until thinking about compatibility with privacy concerns
-    by default, nearly all app data files and preferences would be backup up by enabling this
-    https://developer.android.com/guide/topics/data/autobackup#EnablingAutoBackup
-    `getNoBackupFilesDir` could be used to prevent backup of saved files regardless of this setting:
-    https://developer.android.com/reference/android/content/Context.html#getNoBackupFilesDir()
-    -->
-    <application
-        android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+	<!-- android "protection level": dangerous - needs runtime permission checks -->
+	<uses-permission
+		android:required="true"
+		android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
+	<!-- "Note: Registering an application handler with initialize(Context, Looper, WifiP2pManager.ChannelListener) requires the permissions
+	Manifest.permission.ACCESS_WIFI_STATE and Manifest.permission.CHANGE_WIFI_STATE to perform any further peer-to-peer operations."
+	https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html
+	-->
+	<!-- android "protection level": normal - does not need runtime permission checks, is always granted when app is installed -->
+	<uses-permission
+		android:required="true"
+		android:name="android.permission.ACCESS_WIFI_STATE" />
+
+	<!-- "Note: Registering an application handler with initialize(Context, Looper, WifiP2pManager.ChannelListener) requires the permissions
+	Manifest.permission.ACCESS_WIFI_STATE and Manifest.permission.CHANGE_WIFI_STATE to perform any further peer-to-peer operations."
+	https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html
+	-->
+	<!-- android "protection level": normal - does not need runtime permission checks, permission always granted when app is installed -->
+	<uses-permission
+		android:required="true"
+		android:name="android.permission.CHANGE_WIFI_STATE" />
+	<!-- android "protection level": normal - does not need runtime permission checks, permission always granted when app is installed -->
+	<uses-permission
+		android:required="true"
+		android:name="android.permission.INTERNET" />
+
+
+
+	<!-- TODO make app work on devices without location hardware but wifi (or what does `android.hardware.location` imply?)
+	     explicitly set required hardware features
+	     to find out implicit features and either copy them or set them as not required and make app work without them, use `aapt` tool:
+	     https://developer.android.com/guide/topics/manifest/uses-feature-element#testing
+	-->
+
+
+	<!-- do not allow (cloud) backup for now, until thinking about compatibility with privacy concerns
+	by default, nearly all app data files and preferences would be backup up by enabling this
+	https://developer.android.com/guide/topics/data/autobackup#EnablingAutoBackup
+	`getNoBackupFilesDir` could be used to prevent backup of saved files regardless of this setting:
+	https://developer.android.com/reference/android/content/Context.html#getNoBackupFilesDir()
+	-->
+	<application
+		android:allowBackup="false"
+		android:icon="@mipmap/ic_launcher"
+		android:label="@string/app_name"
+		android:roundIcon="@mipmap/ic_launcher_round"
+		android:supportsRtl="true"
+		android:theme="@style/AppTheme">
+		<activity android:name=".MainActivity">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity>
+	</application>
 
 </manifest>
