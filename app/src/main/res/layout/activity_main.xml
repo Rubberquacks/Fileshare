@@ -27,8 +27,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- android:layout_height and android:layout_width must be 0dp in a constraint layout,
-         there 0dp means match_constraint. For minimum and maximum width/height while respecting the constraints
+    <!-- android:layout_height and android:layout_width must be 0dp in a constraint layout:
+         there, 0dp means match_constraint. For minimum and maximum width/height while respecting the constraints
          there are other parameters:
          https://developer.android.com/training/constraint-layout#adjust-the-view-size
     -->
