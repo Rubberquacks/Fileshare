@@ -19,6 +19,7 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import dev.akampf.fileshare.dummy.DummyContent
 
 
 private const val OPEN_FILE_WITH_FILE_CHOOSER_REQUEST_CODE: Int = 42
@@ -29,7 +30,7 @@ private const val ACCESS_FINE_LOCATION_PERMISSION: String = Manifest.permission.
 
 private const val LOGGING_TAG: String = "own_logs"
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteractionListener {
 
 	private val mWiFiDirectManager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
 		getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
@@ -61,6 +62,12 @@ class MainActivity : AppCompatActivity() {
 
 	fun notifyWiFiDirectPeerListDiscoveryFinished(discoveredPeerList: WifiP2pDeviceList) {
 		Log.i(LOGGING_TAG, discoveredPeerList.toString())
+	}
+
+
+	// the RecyclerView in the fragment calls this method when a view in it was clicked
+	override fun onListFragmentInteraction(item: DummyContent.DummyItem?) {
+		item?.let { clickedItem -> Log.i(LOGGING_TAG, "$clickedItem has been clicked") }
 	}
 
 
@@ -112,15 +119,15 @@ class MainActivity : AppCompatActivity() {
 			}
 		return false
 		} else {
-			// Permission has already been granted
+			// Permission has already been granted, maybe even at install time (on pre Android 6 software)
 			return true
 		}
 	}
 
-	private fun initializeWiFiDrect() {
+	private fun initializeWiFiDirect() {
 		// Registers the application with the Wi-Fi framework.
 		mChannel = mWiFiDirectManager?.initialize(this, mainLooper, null)
-		mChannel?.also { channel ->
+		mChannel?.let { channel ->
 			// if mChannel was not null, we are already sure manager was not null, too, because of the manager?.initialize() call
 			// above only being executed then. So we cast it to not optional type with !!
 			// TODO report to Kotlin?
@@ -140,7 +147,7 @@ class MainActivity : AppCompatActivity() {
 					Log.d(LOGGING_TAG, "grantResults: $grantResults")
 					// permission was granted, yay! Do the
 					// permission related task you need to do.
-					initializeWiFiDrect()
+					initializeWiFiDirect()
 
 
 				} else {
@@ -196,7 +203,7 @@ class MainActivity : AppCompatActivity() {
 			Log.d(LOGGING_TAG, "We already have Fine Location permission")
 			// we already have the necessary permission, otherwise it will be requested and if granted, the wifi initialize function will
 			// be called from there
-			initializeWiFiDrect()
+			initializeWiFiDirect()
 		}
 	}
 
@@ -245,7 +252,7 @@ class MainActivity : AppCompatActivity() {
 
 
 	/** Called when the user taps the Send button */
-	fun sendMessage(view: View) {
+	fun onClickedOpenFileButton(view: View) {
 		this.getOpenableFilePickedByUser()
 
 	}
@@ -272,7 +279,6 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	private fun dumpImageMetaData(uri: Uri) {
-
 		// The query, since it only applies to a single document, will only return
 		// one row. There's no need to filter, sort, or select fields, since we want
 		// all fields for one document.
@@ -307,7 +313,6 @@ class MainActivity : AppCompatActivity() {
 			}
 		}
 	}
-
 
 
 }

@@ -10,7 +10,7 @@
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:onClick="sendMessage"
+        android:onClick="onClickedOpenFileButton"
         android:text="@string/open_file"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -26,5 +26,20 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- android:layout_height and android:layout_width must be 0dp in a constraint layout,
+         which means match_constraint. For minimum and maximum width/height while respecting the constraints
+         there are other parameters:
+         https://developer.android.com/training/constraint-layout#adjust-the-view-size
+    -->
+    <fragment
+        android:id="@+id/device_fragment"
+        android:name="dev.akampf.fileshare.DeviceFragment"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/button"
+        android:layout_height="0dp"
+        android:layout_width="0dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
