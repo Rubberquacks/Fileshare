@@ -12,6 +12,3 @@
 /captures
 .externalNativeBuild
 .cxx
-
-# gradle or android or sth does not work right for me and creates this directory
-$XDG_CACHE_HOME
