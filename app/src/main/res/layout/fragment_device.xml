@@ -1,8 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!-- We use the system `android:attr/selectableItemBackground` not the support library (therefore user-defined)
+     `attr/selectableItemBackground` since we don't support below API level 11 (Android 3.0.x Honeycomb), so the
+     attribute is available normally. See:
+     https://stackoverflow.com/questions/19714682/android-apply-selectableitembackground-in-xml-with-support-v7
+
+     Note that `selectableItemBackgroundBorderless` (animation beyond boundaries of specified view until next parent with non-null background)
+     is only available natively on API level 21 and above (Android 5.0 Lollipop),
+     so for that we probably would need the support library or sth else (or increase the minSdkVersion), see:
+     https://developer.android.com/training/material/animations
+-->
+
+
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:orientation="horizontal"
+    android:background="?android:attr/selectableItemBackground">
 
     <TextView
         android:id="@+id/item_number"

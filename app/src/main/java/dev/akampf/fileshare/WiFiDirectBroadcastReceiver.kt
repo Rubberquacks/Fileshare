@@ -39,12 +39,15 @@ class WiFiDirectBroadcastReceiver(
 						mMainActivity.mWiFiDirectEnabled = false
 					}
 					else -> {
+						// === THIS STATE SHOULD NEVER BE REACHED ===
+
 						// the EXTRA_WIFI_STATE extra of the WiFi Direct State Changed intent was not found (state == -1) or the state is neither
 						// enabled (state == 2) nor disabled (state == 1), which should be the only 2 options when the extra is present
 						// probably the extra also should be present all the time, when receiving the Wifi Direct
 						// state changed action
-						Log.e(LOGGING_TAG, "WIFI_P2P_STATE_CHANGED_ACTION intent received but not an EXTRA_WIFI_STATE " +
-								"extra with enabled or disabled state!\nExtra value (-1 if EXTRA_WIFI_STATE not found) = $wiFiDirectState")
+						Log.e(LOGGING_TAG, "=== THIS STATE SHOULD NEVER BE REACHED!!! === \n" +
+								"WIFI_P2P_STATE_CHANGED_ACTION intent received but not an EXTRA_WIFI_STATE " +
+								"extra with enabled or disabled state!\nExtra value (-1 if EXTRA_WIFI_STATE extra not found) = $wiFiDirectState")
 					}
 				}
 

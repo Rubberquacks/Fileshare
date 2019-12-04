@@ -201,7 +201,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		Log.v(LOGGING_TAG, "onCreate finished")
 
 
-		// TODO: move have some permission check in onResume to detect changes even when activity is not recreated, don't end up in loop
+		// TODO: move/have some permission check in onResume to detect changes even when activity is not recreated, don't end up in loop
 		// when permanently denied!
 
 		if (requestFineLocationPermissionForWiFiDirect()) {
