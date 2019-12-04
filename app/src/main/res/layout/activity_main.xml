@@ -6,26 +6,32 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:onClick="onClickedOpenFileButton"
-        android:text="@string/open_file"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
     <TextView
-        android:id="@+id/wifiDirectStatus"
+        android:id="@+id/wiFiDirectStatus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
         android:text="@string/wifi_direct_unknown_status"
+        android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@+id/button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:onClick="onClickedOpenFileButton"
+        android:text="@string/open_file"
+        app:layout_constraintBottom_toTopOf="@id/device_fragment"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/wiFiDirectStatus" />
 
     <!-- android:layout_height and android:layout_width must be 0dp in a constraint layout:
          there, 0dp means match_constraint. For minimum and maximum width/height while respecting the constraints
@@ -35,11 +41,12 @@
     <fragment
         android:id="@+id/device_fragment"
         android:name="dev.akampf.fileshare.DeviceFragment"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/button"
-        android:layout_height="0dp"
-        android:layout_width="0dp" />
+        tools:layout="@layout/fragment_device_list" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

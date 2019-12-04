@@ -54,7 +54,9 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	var mWiFiDirectEnabled: Boolean = false
 		set(wifiDirectEnabled) {
 			field = wifiDirectEnabled
-			val wifiDirectStateTextView = findViewById<TextView>(R.id.wifiDirectStatus)
+			val wifiDirectStateTextView = findViewById<TextView>(R.id.wiFiDirectStatus)
+
+			// TODO: always check/update WiFi Direct state, even when permission denied, but display the denied permission as state
 			wifiDirectStateTextView.text = if (wifiDirectEnabled) getText(R.string.wifi_direct_enabled) else getText(R.string.wifi_direct_disabled)
 			if (wifiDirectEnabled) discoverWiFiDirectPeers()
 		}
@@ -198,6 +200,9 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		setContentView(R.layout.activity_main)
 		Log.v(LOGGING_TAG, "onCreate finished")
 
+
+		// TODO: move have some permission check in onResume to detect changes even when activity is not recreated, don't end up in loop
+		// when permanently denied!
 
 		if (requestFineLocationPermissionForWiFiDirect()) {
 			Log.d(LOGGING_TAG, "We already have Fine Location permission")
