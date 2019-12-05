@@ -16,10 +16,10 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
-import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import dev.akampf.fileshare.dummy.DummyContent
+import kotlinx.android.synthetic.main.activity_main.*
 
 
 private const val OPEN_FILE_WITH_FILE_CHOOSER_REQUEST_CODE: Int = 42
@@ -50,20 +50,38 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	private var mChannel: WifiP2pManager.Channel? = null
 	private var mWiFiDirectBroadcastReceiver: BroadcastReceiver? = null
 
+
 	// can we distinguish disabled and unavailable? is it unavailable on supported devices sometimes even?
 	var mWiFiDirectEnabled: Boolean = false
-		set(wifiDirectEnabled) {
-			field = wifiDirectEnabled
-			val wifiDirectStateTextView = findViewById<TextView>(R.id.wiFiDirectStatus)
+		set(wiFiDirectEnabled) {
+			field = wiFiDirectEnabled
 
-			// TODO: always check/update WiFi Direct state, even when permission denied, but display the denied permission as state
-			wifiDirectStateTextView.text = if (wifiDirectEnabled) getText(R.string.wifi_direct_enabled) else getText(R.string.wifi_direct_disabled)
-			if (wifiDirectEnabled) discoverWiFiDirectPeers()
+
+			wiFi_direct_status_text_view.text = if (wiFiDirectEnabled) getText(R.string.wifi_direct_enabled) else getText(R.string.wifi_direct_disabled)
+			if (wiFiDirectEnabled) discoverWiFiDirectPeers()
 		}
 
 
-	fun notifyWiFiDirectPeerListDiscoveryFinished(discoveredPeerList: WifiP2pDeviceList) {
-		Log.i(LOGGING_TAG, discoveredPeerList.toString())
+	// TODO luckily setter is not called on initialization with false, since this could be wrong (permission already granted), but still
+	// initialization with false does not really seem clean, maybe initialize with null if not accessed except in setter (no null safety)?
+	private var mFineLocationPermissionGranted: Boolean = false
+		set(fineLocationPermissionGranted_new_value) {
+			field = fineLocationPermissionGranted_new_value
+
+			if (fineLocationPermissionGranted_new_value) {
+				// after initialization, we will receive an intent that wifi direct is enabled or disabled and the setter of mWiFiDirectEnabled will set the
+				// text of WiFi Direct state to enabled or disabled
+				initializeWiFiDirect()
+			} else {
+				// TODO when (first) requesting permission, display sth like "requesting permission" and not denied, cause that seems harsh and
+				// users might see this behind the permission request dialog, "requesting" seems more appropriate to convey the state, even if
+				// denied (from the system) is technically correct
+				wiFi_direct_status_text_view.text = getText(R.string.wifi_direct_location_permission_denied)
+			}
+		}
+
+	fun notifyWiFiDirectPeerListDiscoveryFinished(discoveredPeers: WifiP2pDeviceList) {
+		Log.i(LOGGING_TAG, "Discovered WiFi Direct peers: $discoveredPeers")
 	}
 
 
@@ -74,64 +92,54 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 
 	/**
-	 * If MainActivity currently has specified android permission, can change at any time.
+	 * If MainActivity *currently* has specified android permission, result can change at any time.
 	 *
 	 * @param androidManifestPermission String in the Android.manifest.* namespace.
 	 * @return if permission is currently available
 	 */
 	private fun havePermissionCurrently(androidManifestPermission: String): Boolean {
-		return ContextCompat.checkSelfPermission(this, androidManifestPermission) != PackageManager.PERMISSION_GRANTED
+		return ContextCompat.checkSelfPermission(this, androidManifestPermission) == PackageManager.PERMISSION_GRANTED
 
 	}
 
 	/**
-	 * Request Fine Location if not granted and return if *currently* granted.
-	 *
-	 * @return True if we have the Fine Location permission, false if it *currently* has not been granted
+	 * Request Fine Location permission
 	 */
-	private fun requestFineLocationPermissionForWiFiDirect(): Boolean {
-		// Here, thisActivity is the current activity
-		if (ContextCompat.checkSelfPermission(this,
-				ACCESS_FINE_LOCATION_PERMISSION)
-			!= PackageManager.PERMISSION_GRANTED) {
+	private fun requestFineLocationPermissionForWiFiDirect() {
 
-			// Permission is not granted
-			// Should we show an explanation?
-			if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-					ACCESS_FINE_LOCATION_PERMISSION)) {
-				Log.i(LOGGING_TAG, "Fine Location permission was denied in the past! TODO: show an explanation before retrying")
-				// TODO: Show an explanation to the user *asynchronously* -- don't block
-				// this thread waiting for the user's response! After the user
-				// sees the explanation, try again to request the permission.
+		// Should we show an explanation?
+		if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+				ACCESS_FINE_LOCATION_PERMISSION)) {
+			Log.i(LOGGING_TAG, "Fine Location permission was denied in the past! TODO: show an explanation before retrying")
+			// TODO: Show an explanation to the user *asynchronously* -- don't block
+			// this thread waiting for the user's response! After the user
+			// sees the explanation, try again to request the permission.
 
-				// this will be removed and put in the callback of the explanation window/popup/whatever
-				ActivityCompat.requestPermissions(this,
-					arrayOf(ACCESS_FINE_LOCATION_PERMISSION),
-					ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE)
+			// this will be removed and put in the callback of the explanation window/popup/whatever
+			ActivityCompat.requestPermissions(this,
+				arrayOf(ACCESS_FINE_LOCATION_PERMISSION),
+				ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE)
 
-			} else {
-				// TODO maybe show rationale for location for WiFi Direct every time
-				Log.i(LOGGING_TAG, "Fine Location permission was not denied in the past, request permission directly " +
-						"without showing rationale. TODO maybe show rationale for location for WiFi Direct every time")
-				// No explanation needed, we can request the permission.
-				ActivityCompat.requestPermissions(this,
-					arrayOf(ACCESS_FINE_LOCATION_PERMISSION),
-					ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE)
-				// The callback method gets the result of the request providing the same request code.
-			}
-		return false
 		} else {
-			// Permission has already been granted, maybe even at install time (on pre Android 6 software)
-			return true
+			// TODO maybe show rationale for location for WiFi Direct every time
+			Log.i(LOGGING_TAG, "Fine Location permission was not denied in the past, request permission directly " +
+					"without showing rationale. TODO maybe show rationale for location for WiFi Direct every time")
+			// No explanation needed, we can request the permission.
+			ActivityCompat.requestPermissions(this,
+				arrayOf(ACCESS_FINE_LOCATION_PERMISSION),
+				ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE)
+			// The callback method gets the result of the request providing the same request code.
 		}
 	}
 
 	private fun initializeWiFiDirect() {
 		// Registers the application with the Wi-Fi framework.
+		// TODO: do we need to do all of this even when only onResume is executed and not onCreate?
 		mChannel = mWiFiDirectManager?.initialize(this, mainLooper, null)
 		mChannel?.let { channel ->
-			// if mChannel was not null, we are already sure manager was not null, too, because of the manager?.initialize() call
-			// above only being executed then. So we cast it to not optional type with !!
+			// If mChannel was not null, we are already sure manager was not null, too, because of the mWiFiDirectManager?.initialize() call
+			// above only being executed when mWiFiDirectManager was not null. So we cast it to not optional type with the
+			// characters !! (assert non-null).
 			// TODO report to Kotlin?
 			mWiFiDirectBroadcastReceiver = WiFiDirectBroadcastReceiver(mWiFiDirectManager!!, channel, this)
 			registerReceiver(mWiFiDirectBroadcastReceiver, mWiFiDirectIntentFilter)
@@ -139,17 +147,14 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		}
 	}
 
-	override fun onRequestPermissionsResult(requestCode: Int,
-											permissions: Array<String>, grantResults: IntArray) {
+	override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
 		when (requestCode) {
 			ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE -> {
 				// If request is cancelled, the result arrays are empty.
 				if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-					Log.d(LOGGING_TAG, "permissions: $permissions")
-					Log.d(LOGGING_TAG, "grantResults: $grantResults")
 					// permission was granted, yay! Do the
 					// permission related task you need to do.
-					initializeWiFiDirect()
+					mFineLocationPermissionGranted = true
 
 
 				} else {
@@ -166,8 +171,6 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			}
 		}
 	}
-
-
 
 
 	private fun discoverWiFiDirectPeers() {
@@ -196,37 +199,32 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 
 	override fun onCreate(savedInstanceState: Bundle?) {
+		Log.v(LOGGING_TAG, "onCreate started")
 		super.onCreate(savedInstanceState)
 		setContentView(R.layout.activity_main)
-		Log.v(LOGGING_TAG, "onCreate finished")
-
-
-		// TODO: move/have some permission check in onResume to detect changes even when activity is not recreated, don't end up in loop
-		// when permanently denied!
-
-		if (requestFineLocationPermissionForWiFiDirect()) {
-			Log.d(LOGGING_TAG, "We already have Fine Location permission")
-			// we already have the necessary permission, otherwise it will be requested and if granted, the wifi initialize function will
-			// be called from there
-			initializeWiFiDirect()
-		}
 	}
 
 
-	/* register the broadcast receiver with the intent values to be matched */
 	override fun onResume() {
+		Log.v(LOGGING_TAG, "onResume started")
 		super.onResume()
-		mWiFiDirectBroadcastReceiver?.also { receiver ->
-			registerReceiver(receiver, mWiFiDirectIntentFilter)
+		mFineLocationPermissionGranted = havePermissionCurrently(ACCESS_FINE_LOCATION_PERMISSION)
+
+		if (mFineLocationPermissionGranted) {
+			Log.d(LOGGING_TAG, "We already have Fine Location permission")
+			mFineLocationPermissionGranted = true
+		} else {
+			mFineLocationPermissionGranted = false
+			// TODO permission is requested again after being denied because onResume is executed again, leave for now and change to manually
+			// requesting / explaining how to grant in settings when denied once or twice
+			requestFineLocationPermissionForWiFiDirect()
 		}
-		Log.v(LOGGING_TAG,"onResume finished")
 	}
 
-	/* unregister the broadcast receiver */
 	override fun onPause() {
 		super.onPause()
-		mWiFiDirectBroadcastReceiver?.also { receiver ->
-			unregisterReceiver(receiver)
+		mWiFiDirectBroadcastReceiver?.also { broadcastReceiver ->
+			unregisterReceiver(broadcastReceiver)
 		}
 	}
 
@@ -240,7 +238,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 		// ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
 		// browser.
-		val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+		val intent: Intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
 			// Filter to only show results that can be "opened", such as a
 			// file (as opposed to a list of contacts or timezones)
 			addCategory(Intent.CATEGORY_OPENABLE)

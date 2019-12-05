@@ -9,7 +9,7 @@
     <!-- TODO look up how to properly do spacing/margins or layouts in general, at least move hardcoded values in resource variable -->
 
     <TextView
-        android:id="@+id/wiFiDirectStatus"
+        android:id="@+id/wiFi_direct_status_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
@@ -18,13 +18,13 @@
         android:layout_marginEnd="5dp"
         android:text="@string/wifi_direct_unknown_status"
         android:textSize="25sp"
-        app:layout_constraintBottom_toTopOf="@+id/button"
+        app:layout_constraintBottom_toTopOf="@+id/open_file_button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/open_file_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
@@ -33,7 +33,7 @@
         app:layout_constraintBottom_toTopOf="@id/device_fragment"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/wiFiDirectStatus" />
+        app:layout_constraintTop_toBottomOf="@id/wiFi_direct_status_text_view" />
 
     <!-- android:layout_height and android:layout_width must be 0dp in a constraint layout:
          there, 0dp means match_constraint. For minimum and maximum width/height while respecting the constraints
@@ -48,7 +48,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button"
+        app:layout_constraintTop_toBottomOf="@+id/open_file_button"
         tools:layout="@layout/fragment_device_list" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
