@@ -4,4 +4,5 @@
     <string name="wifi_direct_disabled">WiFi Direct: Disabled</string>
     <string name="open_file">Open File</string>
     <string name="wifi_direct_unknown_status">WiFi Direct: Unknown Status</string>
+    <string name="wifi_direct_location_permission_denied">WiFi Direct: Location Permission denied</string>
 </resources>
