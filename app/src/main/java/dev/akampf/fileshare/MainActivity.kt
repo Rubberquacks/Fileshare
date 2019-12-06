@@ -19,6 +19,8 @@ import android.view.View
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import dev.akampf.fileshare.dummy.DummyContent
+// used to access views directly by their id as the variable name without findViewByID(), uses `kotlin-android-extensions` which
+// does lookup and caching for us
 import kotlinx.android.synthetic.main.activity_main.*
 
 
