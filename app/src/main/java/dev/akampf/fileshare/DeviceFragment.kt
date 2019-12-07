@@ -1,6 +1,7 @@
 package dev.akampf.fileshare
 
 import android.content.Context
+import android.net.wifi.p2p.WifiP2pDevice
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
@@ -9,9 +10,6 @@ import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-
-import dev.akampf.fileshare.dummy.DummyContent
-import dev.akampf.fileshare.dummy.DummyContent.DummyItem
 
 /**
  * A fragment representing a list of Items.
@@ -24,6 +22,8 @@ class DeviceFragment : Fragment() {
 	private var columnCount = 1
 
 	private var listener: OnListFragmentInteractionListener? = null
+
+	lateinit var recyclerViewAdapter: WiFiDirectPeerDevicesRecyclerViewAdapter
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -39,6 +39,15 @@ class DeviceFragment : Fragment() {
 	): View? {
 		val view = inflater.inflate(R.layout.fragment_device_list, container, false)
 
+
+		// listener was set in onAttach and is the view containing this fragment, in our case the main activity
+		val mainActivity = listener as MainActivity
+		// we use that to set a reference to this fragment for the main activity to later interact with the recyclerViewAdaptor to notify it
+		// of changes to the device list
+		mainActivity.deviceFragment = this
+
+		recyclerViewAdapter = WiFiDirectPeerDevicesRecyclerViewAdapter(mainActivity.wiFiDirectPeers, listener)
+
 		// Set the adapter
 		if (view is RecyclerView) {
 			with(view) {
@@ -46,7 +55,7 @@ class DeviceFragment : Fragment() {
 					columnCount <= 1 -> LinearLayoutManager(context)
 					else -> GridLayoutManager(context, columnCount)
 				}
-				adapter = MyDeviceRecyclerViewAdapter(DummyContent.ITEMS, listener)
+				adapter = recyclerViewAdapter
 			}
 		}
 		return view
@@ -57,7 +66,7 @@ class DeviceFragment : Fragment() {
 		if (context is OnListFragmentInteractionListener) {
 			listener = context
 		} else {
-			throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
+			throw RuntimeException("$context must implement OnListFragmentInteractionListener")
 		}
 	}
 
@@ -79,7 +88,7 @@ class DeviceFragment : Fragment() {
 	 */
 	interface OnListFragmentInteractionListener {
 		// TODO: Update argument type and name
-		fun onListFragmentInteraction(item: DummyItem?)
+		fun onListFragmentInteraction(wiFiDirectDevice: WifiP2pDevice)
 	}
 
 	companion object {

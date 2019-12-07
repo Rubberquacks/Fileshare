@@ -7,10 +7,10 @@ import android.net.wifi.p2p.WifiP2pManager
 import android.util.Log
 
 
-private const val LOGGING_TAG: String = "own_logs"
+private const val LOGGING_TAG: String = "WiFiDirectBrdcastRceivr"
 
 /**
- * A BroadcastReceiver that handles / notifies of important Wi-Fi p2p events.
+ * A BroadcastReceiver that handles / notifies of important Wi-Fi Direct events.
  */
 class WiFiDirectBroadcastReceiver(
 	private val mWiFiDirectManager: WifiP2pManager,
@@ -25,16 +25,14 @@ class WiFiDirectBroadcastReceiver(
 				// Check to see if Wi-Fi Direct is enabled and notify appropriate activity
 
 				// TODO in emulator and some real devices on activity resume and wifi enabled (only when connected?) the wifi direct state
-                // constantly toggles between on and off until wifi is disabled, then enabling it (and connecting to a network) does not
-                // lead to the toggling behavior again
+				//  constantly toggles between on and off until wifi is disabled, then enabling it (and connecting to a network) does not
+				//  lead to the toggling behavior again
 				when (val wiFiDirectState: Int = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)) {
 					WifiP2pManager.WIFI_P2P_STATE_ENABLED -> {
-						// Wifi P2P is enabled
 						Log.i(LOGGING_TAG ,"WiFi Direct is ENABLED")
 						mMainActivity.mWiFiDirectEnabled = true
 					}
 					WifiP2pManager.WIFI_P2P_STATE_DISABLED -> {
-						// Wi-Fi P2P is not enabled
 						Log.i(LOGGING_TAG,"WiFi Direct is DISABLED")
 						mMainActivity.mWiFiDirectEnabled = false
 					}
