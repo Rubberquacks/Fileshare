@@ -12,13 +12,12 @@ import android.view.View
 import android.view.ViewGroup
 
 /**
- * A fragment representing a list of Items.
+ * A fragment representing a list of WiFi Direct Devices.
  * Activities containing this fragment MUST implement the
  * [DeviceFragment.OnListFragmentInteractionListener] interface.
  */
 class DeviceFragment : Fragment() {
 
-	// TODO: Customize parameters
 	private var columnCount = 1
 
 	private var listener: OnListFragmentInteractionListener? = null
@@ -63,6 +62,7 @@ class DeviceFragment : Fragment() {
 
 	override fun onAttach(context: Context) {
 		super.onAttach(context)
+		// TODO remove runtime check?
 		if (context is OnListFragmentInteractionListener) {
 			listener = context
 		} else {
@@ -87,7 +87,6 @@ class DeviceFragment : Fragment() {
 	 * for more information.
 	 */
 	interface OnListFragmentInteractionListener {
-		// TODO: Update argument type and name
 		fun onListFragmentInteraction(wiFiDirectDevice: WifiP2pDevice)
 	}
 
