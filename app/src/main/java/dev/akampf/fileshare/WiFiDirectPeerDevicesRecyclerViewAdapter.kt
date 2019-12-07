@@ -15,8 +15,7 @@ import java.util.UUID
 
 /**
  * [RecyclerView.Adapter] that can display a [WifiP2pDevice] and makes a call to the
- * specified [OnListFragmentInteractionListener].
- * TODO: Replace the implementation with code for your data type.
+ * specified [OnListFragmentInteractionListener] when the representing view is clicked.
  */
 class WiFiDirectPeerDevicesRecyclerViewAdapter(
 	private val mValues: List<WifiP2pDevice>,
