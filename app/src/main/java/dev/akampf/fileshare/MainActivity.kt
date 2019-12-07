@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
+import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.net.wifi.p2p.WifiP2pManager
 import androidx.appcompat.app.AppCompatActivity
@@ -18,7 +19,6 @@ import android.util.Log
 import android.view.View
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import dev.akampf.fileshare.dummy.DummyContent
 // used to access views directly by their id as the variable name without findViewByID(), uses `kotlin-android-extensions` which
 // does lookup and caching for us
 import kotlinx.android.synthetic.main.activity_main.*
@@ -30,7 +30,7 @@ private const val ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE: Int = 52
 
 private const val ACCESS_FINE_LOCATION_PERMISSION: String = Manifest.permission.ACCESS_FINE_LOCATION
 
-private const val LOGGING_TAG: String = "own_logs"
+private const val LOGGING_TAG: String = "WiFiDirectMainActivity"
 
 class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteractionListener {
 
@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 
 	// TODO luckily setter is not called on initialization with false, since this could be wrong (permission already granted), but still
-	// initialization with false does not really seem clean, maybe initialize with null if not accessed except in setter (no null safety)?
+	//  initialization with false does not really seem clean, maybe initialize with null if not accessed except in setter (no null safety)?
 	private var mFineLocationPermissionGranted: Boolean = false
 		set(fineLocationPermissionGranted_new_value) {
 			field = fineLocationPermissionGranted_new_value
@@ -75,21 +75,46 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 				// text of WiFi Direct state to enabled or disabled
 				initializeWiFiDirect()
 			} else {
-				// TODO when (first) requesting permission, display sth like "requesting permission" and not denied, cause that seems harsh and
-				// users might see this behind the permission request dialog, "requesting" seems more appropriate to convey the state, even if
-				// denied (from the system) is technically correct
+				// TODO when (first) requesting permission, display sth like "requesting permission" and not "denied", cause that seems harsh and
+				//  users might see this behind the permission request dialog, "requesting" seems more appropriate to convey the state, even if
+				//  denied (from the system) is technically correct
 				wiFi_direct_status_text_view.text = getText(R.string.wifi_direct_location_permission_denied)
 			}
 		}
 
+	lateinit var deviceFragment: DeviceFragment
+
+	val wiFiDirectPeers = mutableListOf<WifiP2pDevice>()
+
 	fun notifyWiFiDirectPeerListDiscoveryFinished(discoveredPeers: WifiP2pDeviceList) {
-		Log.i(LOGGING_TAG, "Discovered WiFi Direct peers: $discoveredPeers")
+		Log.i(LOGGING_TAG, "Discovered WiFi Direct peers:\n$discoveredPeers")
+
+
+		// TODO why not work directly with WifiP2pDeviceList ? current code from:
+		//  https://developer.android.com/training/connect-devices-wirelessly/wifi-direct#fetch
+		val refreshedPeers = discoveredPeers.deviceList
+		if (refreshedPeers != wiFiDirectPeers) {
+			wiFiDirectPeers.clear()
+			wiFiDirectPeers.addAll(refreshedPeers)
+
+			// TODO move peer list management to fragment to make management of ui changes easier?
+			// Tell the RecyclerViewAdapter that is backed by this data that it changed so it can update the view
+			deviceFragment.recyclerViewAdapter.notifyDataSetChanged()
+		}
+
+		if (wiFiDirectPeers.isEmpty()) {
+			Log.d(LOGGING_TAG, "No devices found")
+		}
+
+
+
 	}
 
 
+
 	// the RecyclerView in the fragment calls this method when a view in it was clicked
-	override fun onListFragmentInteraction(item: DummyContent.DummyItem?) {
-		item?.let { clickedItem -> Log.i(LOGGING_TAG, "$clickedItem has been clicked") }
+	override fun onListFragmentInteraction(wiFiDirectDevice: WifiP2pDevice) {
+		wiFiDirectDevice.let { clickedItem -> Log.i(LOGGING_TAG, "$clickedItem\n has been clicked") }
 	}
 
 
@@ -114,8 +139,8 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 				ACCESS_FINE_LOCATION_PERMISSION)) {
 			Log.i(LOGGING_TAG, "Fine Location permission was denied in the past! TODO: show an explanation before retrying")
 			// TODO: Show an explanation to the user *asynchronously* -- don't block
-			// this thread waiting for the user's response! After the user
-			// sees the explanation, try again to request the permission.
+			//  this thread waiting for the user's response! After the user
+			//  sees the explanation, try again to request the permission.
 
 			// this will be removed and put in the callback of the explanation window/popup/whatever
 			ActivityCompat.requestPermissions(this,
@@ -191,8 +216,8 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	    // failed to initiate the scan for peers
 	    override fun onFailure(reasonCode: Int) {
 	      // TODO handle reason
-	      // reason 	int: The reason for failure could be one of WifiP2pManager.P2P_UNSUPPORTED, WifiP2pManager.ERROR or WifiP2pManager.BUSY
-	      // https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.ActionListener.html#onFailure(int)
+	      //  reason 	int: The reason for failure could be one of WifiP2pManager.P2P_UNSUPPORTED, WifiP2pManager.ERROR or WifiP2pManager.BUSY
+	      //  https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.ActionListener.html#onFailure(int)
 
 	      Log.w(LOGGING_TAG, "Initiating peer discovery failed")
 	    }
@@ -218,7 +243,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		} else {
 			mFineLocationPermissionGranted = false
 			// TODO permission is requested again after being denied because onResume is executed again, leave for now and change to manually
-			// requesting / explaining how to grant in settings when denied once or twice
+			//  requesting / explaining how to grant in settings when denied once or twice
 			requestFineLocationPermissionForWiFiDirect()
 		}
 	}
@@ -232,7 +257,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 
 	// TODO consider using ACTION_GET_CONTENT because we only need a copy and not permanent access to the file if it changes and/or modify the file and write it back
-	// https://developer.android.com/guide/topics/providers/document-provider#client
+	//  https://developer.android.com/guide/topics/providers/document-provider#client
 	/**
 	 * Fires an intent to spin up the "file chooser" UI and select a file.
 	 */
@@ -264,7 +289,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 	override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
 		// TODO linter says we should call the superclass here, but android example does not show it
-		// https://developer.android.com/training/data-storage/shared/documents-files#perform-operations
+		//  https://developer.android.com/training/data-storage/shared/documents-files#perform-operations
 
 		// The ACTION_OPEN_DOCUMENT intent was sent with the request code
 		// READ_REQUEST_CODE. If the request code seen here doesn't match, it's the
