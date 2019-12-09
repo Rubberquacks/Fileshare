@@ -105,11 +105,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		if (wiFiDirectPeers.isEmpty()) {
 			Log.d(LOGGING_TAG, "No devices found")
 		}
-
-
-
 	}
-
 
 
 	// the RecyclerView in the fragment calls this method when a view in it was clicked
@@ -169,6 +165,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			// characters !! (assert non-null).
 			// TODO report to Kotlin?
 			mWiFiDirectBroadcastReceiver = WiFiDirectBroadcastReceiver(mWiFiDirectManager!!, channel, this)
+			Log.d(LOGGING_TAG, "registering wifi direct broadcast receiver: $mWiFiDirectBroadcastReceiver")
 			registerReceiver(mWiFiDirectBroadcastReceiver, mWiFiDirectIntentFilter)
 
 		}
@@ -249,8 +246,13 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	}
 
 	override fun onPause() {
+		Log.d(LOGGING_TAG, "onPause start")
 		super.onPause()
+		// TODO IntentReceiverLeaked ERROR even though intent receiver is unregistered here, error is we register 2 receivers (calling
+		//  initializeWiFiDirect 2 times, but only unregister the second one, we shouldn't even
+		//  register 2 receivers (not even unregistering 1 and registering another), cause it is not needed
 		mWiFiDirectBroadcastReceiver?.also { broadcastReceiver ->
+			Log.d(LOGGING_TAG, "$broadcastReceiver")
 			unregisterReceiver(broadcastReceiver)
 		}
 	}
