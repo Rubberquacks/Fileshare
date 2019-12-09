@@ -11,7 +11,6 @@ import android.widget.TextView
 import dev.akampf.fileshare.DeviceFragment.OnListFragmentInteractionListener
 
 import kotlinx.android.synthetic.main.fragment_device.view.*
-import java.util.UUID
 
 /**
  * [RecyclerView.Adapter] that can display a [WifiP2pDevice] and makes a call to the
@@ -66,15 +65,15 @@ class WiFiDirectPeerDevicesRecyclerViewAdapter(
 	// Return the size of the data set (invoked by the layout manager)
 	override fun getItemCount(): Int = mValues.size
 
-	// TODO annotation required to use UUID.nameUUIDFromBytes from the standard Java Library, method may be changed or disappear at any
-	//  time so better alternative must be found
-	@ExperimentalStdlibApi
+	// Used to determine what items are the same, even when updating the whole list (instead of updating only affected items), decreases
+	// resource usage and adds smooth transitions to added, removed and moved items in the list.
+	// Just use mac address hex value converted to long cause it is 48 bit and thus smaller than a 64bit Long so can be used collision free.
 	override fun getItemId(position: Int): Long {
-		// generate a sufficiently unique Long id from the mac address of the device which should be unique
-		// the possible Long values are 2^64 possibilities and less than the possible mac addresses, but with md5 hashing used internally
-		// collisions of mac addresses visible to the user simultaneously in one location should not occur
-		// taken from: https://stackoverflow.com/questions/9309723/how-can-i-generate-a-long-hash-of-a-string/46095268#46095268
-		return UUID.nameUUIDFromBytes(mValues[position].deviceAddress.encodeToByteArray()).mostSignificantBits
+		val wiFiDirectMacAddress: String = mValues[position].deviceAddress
+		// TODO use assert here for expected form of mac address, what are the places to use assert?
+		val macAddressHexStringWithoutColons = wiFiDirectMacAddress.replace(":", "")
+		// radix 16 means we read the String as a hexadecimal number
+		return macAddressHexStringWithoutColons.toLong(16)
 	}
 
 /**
