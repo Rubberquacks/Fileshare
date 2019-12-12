@@ -1,5 +1,7 @@
 package dev.akampf.fileshare
 
+// `import kotlinx.android.synthetic.main.activity_main.* is used to access views directly by their id as the variable name
+// without findViewByID(), uses `kotlin-android-extensions` which does lookup and caching for us
 import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
@@ -12,15 +14,13 @@ import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.net.wifi.p2p.WifiP2pManager
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-// used to access views directly by their id as the variable name without findViewByID(), uses `kotlin-android-extensions` which
-// does lookup and caching for us
 import kotlinx.android.synthetic.main.activity_main.*
 
 
@@ -52,15 +52,19 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	private var mChannel: WifiP2pManager.Channel? = null
 	private var mWiFiDirectBroadcastReceiver: BroadcastReceiver? = null
 
-
+	// TODO can permission be revoked without onResume being called again, do we need to check permissions after checking in onResume that
+	//  we have the permission?
 	// can we distinguish disabled and unavailable? is it unavailable on supported devices sometimes even?
 	var mWiFiDirectEnabled: Boolean = false
 		set(wiFiDirectEnabled) {
-			field = wiFiDirectEnabled
 
 
 			wiFi_direct_status_text_view.text = if (wiFiDirectEnabled) getText(R.string.wifi_direct_enabled) else getText(R.string.wifi_direct_disabled)
-			if (wiFiDirectEnabled) discoverWiFiDirectPeers()
+			if (wiFiDirectEnabled) {
+				discoverWiFiDirectPeers()
+			}
+
+			field = wiFiDirectEnabled
 		}
 
 
@@ -68,18 +72,26 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	//  initialization with false does not really seem clean, maybe initialize with null if not accessed except in setter (no null safety)?
 	private var mFineLocationPermissionGranted: Boolean = false
 		set(fineLocationPermissionGranted_new_value) {
-			field = fineLocationPermissionGranted_new_value
 
-			if (fineLocationPermissionGranted_new_value) {
+			Log.d(LOGGING_TAG, "old value $field new value: $fineLocationPermissionGranted_new_value")
+
+			// only initialize when we did not have location permission (old field value) and now have it,
+			// this prevents initializing wifi direct multiple times,
+			// e.g. when setting this property from the permission callback received *and* in the onResume method
+			if (fineLocationPermissionGranted_new_value != field) {
 				// after initialization, we will receive an intent that wifi direct is enabled or disabled and the setter of mWiFiDirectEnabled will set the
 				// text of WiFi Direct state to enabled or disabled
 				initializeWiFiDirect()
+
 			} else {
 				// TODO when (first) requesting permission, display sth like "requesting permission" and not "denied", cause that seems harsh and
 				//  users might see this behind the permission request dialog, "requesting" seems more appropriate to convey the state, even if
 				//  denied (from the system) is technically correct
 				wiFi_direct_status_text_view.text = getText(R.string.wifi_direct_location_permission_denied)
 			}
+			// set field to new value at the end so we can use the old value before for comparing if it changed or was the same before this setter
+			// was called / the property was set
+			field = fineLocationPermissionGranted_new_value
 		}
 
 	lateinit var deviceFragment: DeviceFragment
@@ -223,7 +235,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 
 	override fun onCreate(savedInstanceState: Bundle?) {
-		Log.v(LOGGING_TAG, "onCreate started")
+		Log.d(LOGGING_TAG, "onCreate started")
 		super.onCreate(savedInstanceState)
 		setContentView(R.layout.activity_main)
 	}
@@ -232,15 +244,16 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	override fun onResume() {
 		Log.v(LOGGING_TAG, "onResume started")
 		super.onResume()
-		mFineLocationPermissionGranted = havePermissionCurrently(ACCESS_FINE_LOCATION_PERMISSION)
+		val haveFineLocationPermission = havePermissionCurrently(ACCESS_FINE_LOCATION_PERMISSION)
 
-		if (mFineLocationPermissionGranted) {
+		if (haveFineLocationPermission) {
 			Log.d(LOGGING_TAG, "We already have Fine Location permission")
 			mFineLocationPermissionGranted = true
 		} else {
 			mFineLocationPermissionGranted = false
 			// TODO permission is requested again after being denied because onResume is executed again, leave for now and change to manually
-			//  requesting / explaining how to grant in settings when denied once or twice
+			//  requesting / explaining how to grant in settings when denied once or twice.
+			//  Move all code dependant on this state to setter?
 			requestFineLocationPermissionForWiFiDirect()
 		}
 	}
@@ -252,7 +265,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		//  initializeWiFiDirect 2 times, but only unregister the second one, we shouldn't even
 		//  register 2 receivers (not even unregistering 1 and registering another), cause it is not needed
 		mWiFiDirectBroadcastReceiver?.also { broadcastReceiver ->
-			Log.d(LOGGING_TAG, "$broadcastReceiver")
+			Log.d(LOGGING_TAG, "unregistering wifi direct broadcast receiver: $broadcastReceiver")
 			unregisterReceiver(broadcastReceiver)
 		}
 	}
