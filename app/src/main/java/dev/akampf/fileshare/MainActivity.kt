@@ -11,6 +11,8 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
+import android.net.wifi.WpsInfo
+import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.net.wifi.p2p.WifiP2pManager
@@ -18,6 +20,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -54,13 +57,15 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 	// TODO can permission be revoked without onResume being called again, do we need to check permissions after checking in onResume that
 	//  we have the permission?
+	// TODO how to handle if later wifi is deactivated when we connect to a device or are already connected etc
 	// can we distinguish disabled and unavailable? is it unavailable on supported devices sometimes even?
 	var mWiFiDirectEnabled: Boolean = false
 		set(wiFiDirectEnabled) {
 
 
 			wiFi_direct_status_text_view.text = if (wiFiDirectEnabled) getText(R.string.wifi_direct_enabled) else getText(R.string.wifi_direct_disabled)
-			if (wiFiDirectEnabled) {
+			if (wiFiDirectEnabled && mFineLocationPermissionGranted) {
+				// TODO maybe request again if not granted? think about at what times request is appropriate or just make button after first request
 				discoverWiFiDirectPeers()
 			}
 
@@ -75,15 +80,13 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 			Log.d(LOGGING_TAG, "old value $field new value: $fineLocationPermissionGranted_new_value")
 
-			// only initialize when we did not have location permission (old field value) and now have it,
-			// this prevents initializing wifi direct multiple times,
-			// e.g. when setting this property from the permission callback received *and* in the onResume method
-			if (fineLocationPermissionGranted_new_value != field) {
-				// after initialization, we will receive an intent that wifi direct is enabled or disabled and the setter of mWiFiDirectEnabled will set the
-				// text of WiFi Direct state to enabled or disabled
-				initializeWiFiDirect()
-
-			} else {
+			if (fineLocationPermissionGranted_new_value) {
+				if (mWiFiDirectEnabled) {
+					discoverWiFiDirectPeers()
+				}
+				// TODO notify that wifi needs to be enabled after location permission was granted or just enable it yourself and notify about it?
+			}
+			else {
 				// TODO when (first) requesting permission, display sth like "requesting permission" and not "denied", cause that seems harsh and
 				//  users might see this behind the permission request dialog, "requesting" seems more appropriate to convey the state, even if
 				//  denied (from the system) is technically correct
@@ -122,9 +125,55 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 	// the RecyclerView in the fragment calls this method when a view in it was clicked
 	override fun onListFragmentInteraction(wiFiDirectDevice: WifiP2pDevice) {
-		wiFiDirectDevice.let { clickedItem -> Log.i(LOGGING_TAG, "$clickedItem\n has been clicked") }
+		wiFiDirectDevice.let {
+				clickedItem -> Log.i(LOGGING_TAG, "$clickedItem\n has been clicked")
+				connectToWiFiDirectDevice(wiFiDirectDevice)
+		}
 	}
 
+	private fun connectToWiFiDirectDevice(wiFiDirectDeviceToConnectTo: WifiP2pDevice) {
+
+		val wiFiDirectConnectionConfig = WifiP2pConfig().apply {
+			deviceAddress = wiFiDirectDeviceToConnectTo.deviceAddress
+			// TODO use other wps setup method if PBC not supported or is PBC always supported by laptops, tablets, phones, etc?
+			// TODO is that needed? not done here: https://developer.android.com/guide/topics/connectivity/wifip2p#connect
+			wps.setup = WpsInfo.PBC
+		}
+
+		// initiates WiFi Direct group negotiation with target or invite device to existing group where this device is already part of (because
+		// it has joined or hat is created itself)
+		// TODO at this point another device was found, so the manager was clearly initiated, should we just assume that, assert that or catch
+		//  the case that it was null and display an error / handle it appropriately?
+		mChannel.also {
+			// TODO here https://developer.android.com/training/connect-devices-wirelessly/wifi-direct#connect it is done without ?. (safe call) /
+			//  being safe that mChannel is null and ide also does not complain that mChannel is of nullable type, even though it
+			//  complains about that when initializing, even though there the manager should be not null after initialization the channel with it
+			//  and only doing sth with the channel if it is not null and using the manager there
+			mWiFiDirectManager?.connect(mChannel, wiFiDirectConnectionConfig, object : WifiP2pManager.ActionListener {
+
+				override fun onSuccess() {
+					Log.d(LOGGING_TAG, "Initiation of connection to $wiFiDirectDeviceToConnectTo succeeded")
+					// WiFiDirectBroadcastReceiver notifies us. Ignore for now.
+				}
+
+				override fun onFailure(reason: Int) {
+					// TODO handle reason
+					//  reason 	int: The reason for failure could be one of WifiP2pManager.P2P_UNSUPPORTED, WifiP2pManager.ERROR or WifiP2pManager.BUSY
+					//  https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.ActionListener.html#onFailure(int)
+					Log.i(
+						LOGGING_TAG,
+						"Initiation of connection to $wiFiDirectDeviceToConnectTo failed with failure code $reason TODO parse error code"
+					)
+					Toast.makeText(
+						this@MainActivity,
+						"Connect failed. Retry.",
+						Toast.LENGTH_SHORT
+					).show()
+				}
+			})
+		}
+
+	}
 
 	/**
 	 * If MainActivity *currently* has specified android permission, result can change at any time.
@@ -168,8 +217,14 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	}
 
 	private fun initializeWiFiDirect() {
-		// Registers the application with the Wi-Fi framework.
-		// TODO: do we need to do all of this even when only onResume is executed and not onCreate?
+		// Registers the application with the Wi-Fi Direct framework to do any further operations.
+
+		// TODO: do we need to do all of this even when only onResume is executed and not onCreate? according to examples, this is not the case
+		// this only needs `android.permission.ACCESS_WIFI_STATE` so we wan safely call it without location permission, cause
+		// `android.permission.ACCESS_WIFI_STATE` was granted at install time
+		// TODO should we deal with frameworks that revoke this? possible to check this permission like checking e.g. location permission?
+
+		// TODO set listener to be notified of loss of framework communication?
 		mChannel = mWiFiDirectManager?.initialize(this, mainLooper, null)
 		mChannel?.let { channel ->
 			// If mChannel was not null, we are already sure manager was not null, too, because of the mWiFiDirectManager?.initialize() call
@@ -177,8 +232,6 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			// characters !! (assert non-null).
 			// TODO report to Kotlin?
 			mWiFiDirectBroadcastReceiver = WiFiDirectBroadcastReceiver(mWiFiDirectManager!!, channel, this)
-			Log.d(LOGGING_TAG, "registering wifi direct broadcast receiver: $mWiFiDirectBroadcastReceiver")
-			registerReceiver(mWiFiDirectBroadcastReceiver, mWiFiDirectIntentFilter)
 
 		}
 	}
@@ -238,12 +291,18 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		Log.d(LOGGING_TAG, "onCreate started")
 		super.onCreate(savedInstanceState)
 		setContentView(R.layout.activity_main)
+		initializeWiFiDirect()
 	}
 
 
 	override fun onResume() {
 		Log.v(LOGGING_TAG, "onResume started")
 		super.onResume()
+
+
+		Log.d(LOGGING_TAG, "registering wifi direct broadcast receiver: $mWiFiDirectBroadcastReceiver")
+		registerReceiver(mWiFiDirectBroadcastReceiver, mWiFiDirectIntentFilter)
+
 		val haveFineLocationPermission = havePermissionCurrently(ACCESS_FINE_LOCATION_PERMISSION)
 
 		if (haveFineLocationPermission) {
@@ -261,9 +320,6 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	override fun onPause() {
 		Log.d(LOGGING_TAG, "onPause start")
 		super.onPause()
-		// TODO IntentReceiverLeaked ERROR even though intent receiver is unregistered here, error is we register 2 receivers (calling
-		//  initializeWiFiDirect 2 times, but only unregister the second one, we shouldn't even
-		//  register 2 receivers (not even unregistering 1 and registering another), cause it is not needed
 		mWiFiDirectBroadcastReceiver?.also { broadcastReceiver ->
 			Log.d(LOGGING_TAG, "unregistering wifi direct broadcast receiver: $broadcastReceiver")
 			unregisterReceiver(broadcastReceiver)
