@@ -3,6 +3,9 @@ package dev.akampf.fileshare
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.net.NetworkInfo
+import android.net.wifi.p2p.WifiP2pGroup
+import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.util.Log
 
@@ -51,12 +54,23 @@ class WiFiDirectBroadcastReceiver(
 
 			}
 			WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
+				Log.d(LOGGING_TAG, "WiFi Direct Peers Changed Intent received")
 				// The discovery finished, now we can request a list of current peers, note that it might be empty!
 				// When this asynchronous method has the results, we notify we main activity and pass the peer list to it.
 				mWiFiDirectManager.requestPeers(mWiFiDirectChannel) { peerList -> mMainActivity.notifyWiFiDirectPeerListDiscoveryFinished(peerList) }
 
 			}
 			WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+				val wiFiDirectInfo: WifiP2pInfo? = intent.getParcelableExtra<WifiP2pInfo>(WifiP2pManager.EXTRA_WIFI_P2P_INFO)
+				// TODO use of this is deprecated: https://developer.android.com/reference/android/net/NetworkInfo.html
+				//  but it is described in the documentation that it is an info provided in this intent here:
+				//  https://developer.android.com/reference/kotlin/android/net/wifi/p2p/WifiP2pManager.html#wifi_p2p_connection_changed_action
+				val networkInfo: NetworkInfo? = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO)
+				val wiFiDirectGroup: WifiP2pGroup? = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP)
+				Log.i(LOGGING_TAG, "WiFi Direct Connection Status changed:\n" +
+						"WiFiDirectInfo: $wiFiDirectInfo\n" +
+						"NetworkInfo: $networkInfo\n" +
+						"WiFi Direct Group: $wiFiDirectGroup")
 				// Respond to new connection or disconnections
 			}
 			WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
