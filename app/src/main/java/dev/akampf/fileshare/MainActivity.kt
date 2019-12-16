@@ -104,6 +104,8 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	fun notifyWiFiDirectPeerListDiscoveryFinished(discoveredPeers: WifiP2pDeviceList) {
 		Log.i(LOGGING_TAG, "Discovered WiFi Direct peers:\n$discoveredPeers")
 
+		// TODO sort or even filter by device type: https://www.wifi-libre.com/img/members/3/Wi-Fi_Simple_Configuration_Technical_Specification_v2_0_5.pdf
+
 
 		// TODO why not work directly with WifiP2pDeviceList ? current code from:
 		//  https://developer.android.com/training/connect-devices-wirelessly/wifi-direct#fetch
@@ -125,9 +127,9 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 	// the RecyclerView in the fragment calls this method when a view in it was clicked
 	override fun onListFragmentInteraction(wiFiDirectDevice: WifiP2pDevice) {
-		wiFiDirectDevice.let {
-				clickedItem -> Log.i(LOGGING_TAG, "$clickedItem\n has been clicked")
-				connectToWiFiDirectDevice(wiFiDirectDevice)
+		wiFiDirectDevice.let {clickedItem ->
+			Log.i(LOGGING_TAG, "$clickedItem\n has been clicked")
+			connectToWiFiDirectDevice(wiFiDirectDevice)
 		}
 	}
 
