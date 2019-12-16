@@ -115,6 +115,8 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			wiFiDirectPeers.addAll(refreshedPeers)
 
 			// TODO move peer list management to fragment to make management of ui changes easier?
+			//  or at least use https://developer.android.com/guide/components/fragments#CommunicatingWithActivity or
+			//  https://developer.android.com/reference/kotlin/androidx/fragment/app/FragmentManager.html to interact with fragment?
 			// Tell the RecyclerViewAdapter that is backed by this data that it changed so it can update the view
 			deviceFragment.recyclerViewAdapter.notifyDataSetChanged()
 		}
