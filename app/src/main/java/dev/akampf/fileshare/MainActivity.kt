@@ -20,10 +20,10 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 
 
@@ -168,10 +168,11 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 						LOGGING_TAG,
 						"Initiation of connection to $wiFiDirectDeviceToConnectTo failed with failure code $reason TODO parse error code"
 					)
-					Toast.makeText(
-						this@MainActivity,
-						"Connect failed. Retry.",
-						Toast.LENGTH_SHORT
+					Snackbar.make(
+						root_coordinator_layout,
+						"Initiation of connection to ${wiFiDirectDeviceToConnectTo.deviceName} (${wiFiDirectDeviceToConnectTo.deviceAddress}) failed with code " +
+								"$reason",
+						Snackbar.LENGTH_LONG
 					).show()
 				}
 			})
