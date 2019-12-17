@@ -153,6 +153,8 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			//  being safe that mChannel is null and ide also does not complain that mChannel is of nullable type, even though it
 			//  complains about that when initializing, even though there the manager should be not null after initialization the channel with it
 			//  and only doing sth with the channel if it is not null and using the manager there
+
+			// TODO linter says this and other methods called need permission check, when / how often do we need to check these permissions?
 			mWiFiDirectManager?.connect(mChannel, wiFiDirectConnectionConfig, object : WifiP2pManager.ActionListener {
 
 				override fun onSuccess() {
