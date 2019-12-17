@@ -1,54 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<!--
+We wrap the existing layout in a `CoordinatorLayout` to make a displayed `Snackbar` able to be dismissed by swiping it away and allowing
+the `Snackbar` to move a button like a `FloatingActionButton` up and out of the way instead of drawing it on top of the button.
+https://developer.android.com/training/snackbar/showing.html#coordinator
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    android:id="@+id/root_coordinator_layout"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
-    <!-- TODO look up how to properly do spacing/margins or layouts in general, at least move hardcoded values in resource variable -->
+    <!-- Here are the existing layout elements, now wrapped in
+         a CoordinatorLayout -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/wiFi_direct_status_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="5dp"
-        android:layout_marginStart="5dp"
-        android:layout_marginEnd="5dp"
-        android:text="@string/wifi_direct_unknown_status"
-        android:textSize="25sp"
-        app:layout_constraintBottom_toTopOf="@+id/open_file_button"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <!-- TODO look up how to properly do spacing/margins or layouts in general, at least move hardcoded values in resource variable -->
 
-    <Button
-        android:id="@+id/open_file_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="5dp"
-        android:onClick="onClickedOpenFileButton"
-        android:text="@string/open_file"
-        app:layout_constraintBottom_toTopOf="@id/device_fragment"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/wiFi_direct_status_text_view" />
+        <TextView
+            android:id="@+id/wiFi_direct_status_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+            android:text="@string/wifi_direct_unknown_status"
+            android:textSize="25sp"
+            app:layout_constraintBottom_toTopOf="@+id/open_file_button"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- android:layout_height and android:layout_width must be 0dp in a constraint layout:
-         there, 0dp means match_constraint. For minimum and maximum width/height while respecting the constraints
-         there are other parameters:
-         https://developer.android.com/training/constraint-layout#adjust-the-view-size
-    -->
-    <fragment
-        android:id="@+id/device_fragment"
-        android:name="dev.akampf.fileshare.DeviceFragment"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/open_file_button"
-        tools:layout="@layout/fragment_device_list" />
+        <Button
+            android:id="@+id/open_file_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp"
+            android:onClick="onClickedOpenFileButton"
+            android:text="@string/open_file"
+            app:layout_constraintBottom_toTopOf="@id/device_fragment"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/wiFi_direct_status_text_view" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- android:layout_height and android:layout_width must be 0dp in a constraint layout:
+             there, 0dp means match_constraint. For minimum and maximum width/height while respecting the constraints
+             there are other parameters:
+             https://developer.android.com/training/constraint-layout#adjust-the-view-size
+        -->
+        <fragment
+            android:id="@+id/device_fragment"
+            android:name="dev.akampf.fileshare.DeviceFragment"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/open_file_button"
+            tools:layout="@layout/fragment_device_list" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
