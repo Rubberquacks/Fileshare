@@ -1,7 +1,7 @@
 package dev.akampf.fileshare
 
-// `import kotlinx.android.synthetic.main.activity_main.* is used to access views directly by their id as the variable name
-// without findViewByID(), uses `kotlin-android-extensions` which does lookup and caching for us
+// `import kotlinx.android.synthetic.main.activity_main.*` is used to access views directly by their id as the variable name
+// without `findViewByID()`, uses `kotlin-android-extensions` which does lookup and caching for us
 import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
@@ -12,19 +12,23 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.net.wifi.WpsInfo
-import android.net.wifi.p2p.WifiP2pConfig
-import android.net.wifi.p2p.WifiP2pDevice
-import android.net.wifi.p2p.WifiP2pDeviceList
-import android.net.wifi.p2p.WifiP2pManager
+import android.net.wifi.p2p.*
+import android.os.AsyncTask
 import android.os.Bundle
+import android.os.Environment
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
+import java.io.*
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.net.Socket
 
 
 private const val OPEN_FILE_WITH_FILE_CHOOSER_REQUEST_CODE: Int = 42
@@ -40,6 +44,8 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	private val mWiFiDirectManager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
 		getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
 	}
+
+	var connectedWiFiDirectInfo: WifiP2pInfo? = null
 
 	private val mWiFiDirectIntentFilter = IntentFilter().apply {
 		// Indicates a change in the Wi-Fi P2P status.
@@ -141,6 +147,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			deviceAddress = wiFiDirectDeviceToConnectTo.deviceAddress
 			// TODO use other wps setup method if PBC not supported or is PBC always supported by laptops, tablets, phones, etc?
 			// TODO is that needed? not done here: https://developer.android.com/guide/topics/connectivity/wifip2p#connect
+			//  PBC is default value
 			wps.setup = WpsInfo.PBC
 		}
 
@@ -382,6 +389,55 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 				Log.v(LOGGING_TAG, "Uri: $uri")
 				this.dumpImageMetaData(uri)
 				//showImage(uri)
+
+
+
+
+				// TODO move in intent service or similar, else network runs on UI thread which results in error
+
+				val context = applicationContext
+				if (connectedWiFiDirectInfo?.groupOwnerAddress == null) { TODO("handle error when not already connected / change app control and navigation flow") }
+				Log.d(LOGGING_TAG, connectedWiFiDirectInfo.toString())
+				val groupOwnerIpAddress: String = connectedWiFiDirectInfo!!.groupOwnerAddress.hostAddress
+				// TODO extract in variable to use here and in server socket creation
+				val port: Int = 8888
+				val socket = Socket()
+
+				try {
+					/**
+					 * Create a client socket with the host,
+					 * port, and timeout information.
+					 */
+					socket.bind(null)
+					socket.connect((InetSocketAddress(groupOwnerIpAddress, port)), 500)
+
+					/**
+					 * Create a byte stream from a JPEG file and pipe it to the output stream
+					 * of the socket. This data is retrieved by the server device.
+					 */
+					val outputStream = socket.getOutputStream()
+					val contentResolver = context.contentResolver
+					if (contentResolver.openInputStream(uri) == null) { return TODO("handle error") }
+					val inputStream: InputStream = contentResolver.openInputStream(uri)!!
+					copyFile(inputStream, outputStream)
+					outputStream.close()
+					inputStream.close()
+				} catch (e: FileNotFoundException) {
+					TODO("catch logic")
+				} catch (e: IOException) {
+					TODO("catch logic")
+				} finally {
+					/**
+					 * Clean up any open sockets when done
+					 * transferring or if an exception occurred.
+					 */
+					socket.takeIf { it.isConnected }?.apply {
+						close()
+					}
+				}
+
+
+
 			}
 		}
 	}
@@ -423,4 +479,77 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	}
 
 
+}
+
+
+fun copyFile(inputStream: InputStream, out: OutputStream): Boolean {
+	// TODO does this limit the file size? where is this buffer used multiple times to allow larger files?
+	val buffer = ByteArray(1024)
+	var numberOfBytesRead: Int
+	try {
+		while (inputStream.read(buffer).also { numberOfBytesRead = it } != -1) {
+			out.write(buffer, 0, numberOfBytesRead)
+		}
+		out.close()
+		inputStream.close()
+	} catch (e: IOException) {
+		Log.e(LOGGING_TAG, e.toString())
+		return false
+	}
+	return true
+}
+
+
+
+class FileServerAsyncTask(
+	private val context: Context,
+	private var statusText: TextView
+) : AsyncTask<Void, Void, String?>() {
+
+	override fun doInBackground(vararg params: Void): String? {
+		/**
+		 * Create a server socket.
+		 */
+		val serverSocket = ServerSocket(8888)
+		return serverSocket.use {
+			/**
+			 * Wait for client connections. This call blocks until a
+			 * connection is accepted from a client.
+			 */
+			val socketToConnectedClient = serverSocket.accept()
+			/**
+			 * If this code is reached, a client has connected and transferred data
+			 * Save the input stream from the client as a JPEG file
+			 */
+			val destinationFile = File(
+				// TODO replace by internal storage directory
+				Environment.getExternalStorageDirectory().absolutePath +
+					"/${context.packageName}/wifip2pshared-${System.currentTimeMillis()}.jpg")
+			val dirs = File(destinationFile.parent)
+
+			dirs.takeIf { it.doesNotExist() }?.apply {
+				mkdirs()
+			}
+			destinationFile.createNewFile()
+			val inputStream = socketToConnectedClient.getInputStream()
+			copyFile(inputStream, FileOutputStream(destinationFile))
+			serverSocket.close()
+			destinationFile.absolutePath
+		}
+	}
+
+	private fun File.doesNotExist(): Boolean = !exists()
+
+	/**
+	 * Start activity that can handle the JPEG image
+	 */
+	override fun onPostExecute(result: String?) {
+		result?.run {
+			statusText.text = "File copied - $result"
+			val intent = Intent(android.content.Intent.ACTION_VIEW).apply {
+				setDataAndType(Uri.parse("file://$result"), "image/*")
+			}
+			context.startActivity(intent)
+		}
+	}
 }

@@ -4,10 +4,18 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.NetworkInfo
+import android.net.Uri
 import android.net.wifi.p2p.WifiP2pGroup
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.util.Log
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.activity_main.*
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
+import java.net.InetSocketAddress
+import java.net.Socket
 
 
 private const val LOGGING_TAG: String = "WiFiDirectBrdcastRceivr"
@@ -61,7 +69,9 @@ class WiFiDirectBroadcastReceiver(
 
 			}
 			WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
-				val wiFiDirectInfo: WifiP2pInfo? = intent.getParcelableExtra<WifiP2pInfo>(WifiP2pManager.EXTRA_WIFI_P2P_INFO)
+				val wiFiDirectInfo: WifiP2pInfo? = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO)
+				mMainActivity.connectedWiFiDirectInfo = wiFiDirectInfo
+
 				// TODO use of this is deprecated: https://developer.android.com/reference/android/net/NetworkInfo.html
 				//  but it is described in the documentation that it is an info provided in this intent here:
 				//  https://developer.android.com/reference/kotlin/android/net/wifi/p2p/WifiP2pManager.html#wifi_p2p_connection_changed_action
@@ -72,6 +82,53 @@ class WiFiDirectBroadcastReceiver(
 						"NetworkInfo: $networkInfo\n" +
 						"WiFi Direct Group: $wiFiDirectGroup")
 				// Respond to new connection or disconnections
+
+				mWiFiDirectManager?.let { wiFiDirectManager ->
+
+					if (networkInfo?.isConnected == true) {
+
+
+						// We are connected with the other device, request connection
+						// info to find group owner IP
+
+						val connectionInfoListener = WifiP2pManager.ConnectionInfoListener { wiFiDirectInfo ->
+
+							Snackbar.make(
+								mMainActivity.root_coordinator_layout,
+								"Connection ${wiFiDirectGroup?.networkName} with owner ${wiFiDirectGroup?.owner} ${if (wiFiDirectInfo.isGroupOwner) {" (this device)"} else {""} } established",
+								Snackbar.LENGTH_LONG
+							).show()
+
+							// IP address from WifiP2pInfo struct.
+							val groupOwnerIpAddress: String = wiFiDirectInfo.groupOwnerAddress.hostAddress.also {Log.d(LOGGING_TAG, "group owner address: $it")}
+
+							// After the group negotiation, we can determine the group owner
+							// (server).
+							if (wiFiDirectInfo.groupFormed && wiFiDirectInfo.isGroupOwner) {
+								Log.d(LOGGING_TAG,"current device is group owner")
+								// Do whatever tasks are specific to the group owner.
+								// One common case is creating a group owner thread and accepting
+								// incoming connections.
+								FileServerAsyncTask(mMainActivity, mMainActivity.wiFi_direct_status_text_view).execute()
+							} else if (wiFiDirectInfo.groupFormed) {
+								Log.d(LOGGING_TAG,"other device is group owner")
+								// The other device acts as the peer (client). In this case,
+								// you'll want to create a peer thread that connects
+								// to the group owner.
+
+
+
+
+							}
+						}
+
+
+						wiFiDirectManager.requestConnectionInfo(mWiFiDirectChannel, connectionInfoListener)
+					}
+				}
+
+
+
 			}
 			WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
 				// Respond to this device's wifi state changing
