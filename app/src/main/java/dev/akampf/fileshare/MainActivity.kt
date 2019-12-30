@@ -179,8 +179,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 					)
 					Snackbar.make(
 						root_coordinator_layout,
-						"Initiation of connection to ${wiFiDirectDeviceToConnectTo.deviceName} (${wiFiDirectDeviceToConnectTo.deviceAddress}) failed with code " +
-								"$reason",
+						getString(R.string.wifi_direct_connection_initiation_failed, wiFiDirectDeviceToConnectTo.deviceName, wiFiDirectDeviceToConnectTo.deviceAddress, reason),
 						Snackbar.LENGTH_LONG
 					).show()
 				}

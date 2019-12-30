@@ -93,10 +93,17 @@ class WiFiDirectBroadcastReceiver(
 
 						val connectionInfoListener = WifiP2pManager.ConnectionInfoListener { wiFiDirectInfo ->
 
+							Log.d(LOGGING_TAG, "WifiDirect Group: $wiFiDirectGroup")
+
+							Log.d(LOGGING_TAG, "Group Owner: ${wiFiDirectGroup?.owner}")
+
+							Log.d(LOGGING_TAG, "Groupowner Name: ${wiFiDirectGroup?.owner?.deviceName}")
+							Log.d(LOGGING_TAG, "Groupowner Adress: ${wiFiDirectGroup?.owner?.deviceAddress}")
+
 							Snackbar.make(
 								mMainActivity.root_coordinator_layout,
-								"Connection ${wiFiDirectGroup?.networkName} with owner ${wiFiDirectGroup?.owner} ${if (wiFiDirectInfo.isGroupOwner) {" (this device)"} else {""} } established",
-								Snackbar.LENGTH_LONG
+								mMainActivity.getString(R.string.wifi_direct_connection_established, wiFiDirectGroup?.networkName, wiFiDirectGroup?.owner?.deviceName, if (wiFiDirectInfo.isGroupOwner) {R.string.wifi_direct_connection_established_this_device} else ""),
+								Snackbar.LENGTH_INDEFINITE
 							).show()
 
 							// IP address from WifiP2pInfo struct.
@@ -115,10 +122,6 @@ class WiFiDirectBroadcastReceiver(
 								// The other device acts as the peer (client). In this case,
 								// you'll want to create a peer thread that connects
 								// to the group owner.
-
-
-
-
 							}
 						}
 
