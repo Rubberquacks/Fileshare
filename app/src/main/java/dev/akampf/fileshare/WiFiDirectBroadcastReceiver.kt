@@ -1,21 +1,16 @@
 package dev.akampf.fileshare
 
+// see comment in imports in MainActivity for explanation of the `kotlinx.android.synthetic...` import
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.NetworkInfo
-import android.net.Uri
 import android.net.wifi.p2p.WifiP2pGroup
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.util.Log
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
-import java.io.FileNotFoundException
-import java.io.IOException
-import java.io.InputStream
-import java.net.InetSocketAddress
-import java.net.Socket
 
 
 private const val LOGGING_TAG: String = "WiFiDirectBrdcastRceivr"
@@ -87,22 +82,22 @@ class WiFiDirectBroadcastReceiver(
 
 					if (networkInfo?.isConnected == true) {
 
+						Log.d(LOGGING_TAG, "NetworkInfo says we are connected")
 
 						// We are connected with the other device, request connection
 						// info to find group owner IP
 
 						val connectionInfoListener = WifiP2pManager.ConnectionInfoListener { wiFiDirectInfo ->
 
-							Log.d(LOGGING_TAG, "WifiDirect Group: $wiFiDirectGroup")
-
-							Log.d(LOGGING_TAG, "Group Owner: ${wiFiDirectGroup?.owner}")
-
-							Log.d(LOGGING_TAG, "Groupowner Name: ${wiFiDirectGroup?.owner?.deviceName}")
-							Log.d(LOGGING_TAG, "Groupowner Adress: ${wiFiDirectGroup?.owner?.deviceAddress}")
+							val thisOrOtherDeviceText = if (wiFiDirectInfo.isGroupOwner) {
+									mMainActivity.getText(R.string.wifi_direct_connection_established_this_device)
+								} else {
+								mMainActivity.getText(R.string.wifi_direct_connection_established_other_device)
+								}
 
 							Snackbar.make(
 								mMainActivity.root_coordinator_layout,
-								mMainActivity.getString(R.string.wifi_direct_connection_established, wiFiDirectGroup?.networkName, wiFiDirectGroup?.owner?.deviceName, if (wiFiDirectInfo.isGroupOwner) {R.string.wifi_direct_connection_established_this_device} else ""),
+								mMainActivity.getString(R.string.wifi_direct_connection_established, wiFiDirectGroup?.networkName, wiFiDirectGroup?.owner?.deviceName, thisOrOtherDeviceText),
 								Snackbar.LENGTH_INDEFINITE
 							).show()
 

@@ -41,6 +41,7 @@ private const val LOGGING_TAG: String = "WiFiDirectMainActivity"
 
 class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteractionListener {
 
+	// TODO register callback when connection to system WiFi Direct maneger gets lost and handle appropriately
 	private val mWiFiDirectManager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
 		getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
 	}
