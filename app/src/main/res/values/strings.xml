@@ -9,7 +9,9 @@
     <string name="wifi_direct_connection_initiation_failed">Initiation of connection to %1$s %2$s failed with code %3$d</string>
     <!-- First argument is the network name of the created wifi direct network, the second argument is the name of the group owner and the
     third says whether or not this device is the owner of the network-->
-    <string name="wifi_direct_connection_established">Connection %1$s owner %2$s  %3$s established</string>
+    <string name="wifi_direct_connection_established">Connection %1$s with owner %2$s %3$s established</string>
     <!-- Will be to reference the own device when a connection is established with the own device as group owner-->
-    <string name="wifi_direct_connection_established_this_device"> (this device)</string>
+    <string name="wifi_direct_connection_established_this_device">(this device)</string>
+    <!-- Will be to reference the own device when a connection is established with the own device as group owner-->
+    <string name="wifi_direct_connection_established_other_device">(other device)</string>
 </resources>
