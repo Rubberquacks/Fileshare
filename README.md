@@ -1,6 +1,6 @@
 # Fileshare
 
-Android app to share files securely via best available method automatically detected from Direct connection (WiFi Direct, BT), Local Network, Internet or Relay Server.
+Android app to share files securely via best available method automatically detected from Direct connection (WiFi Direct, BT, etc), Local Network, Internet or Relay Server.
 Other transport modes are possible to add in the future if beneficial.
 
 
