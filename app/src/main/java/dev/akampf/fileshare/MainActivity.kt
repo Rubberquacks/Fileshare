@@ -4,18 +4,16 @@ package dev.akampf.fileshare
 // without `findViewByID()`, uses `kotlin-android-extensions` which does lookup and caching for us
 import android.Manifest
 import android.app.Activity
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.app.IntentService
+import android.content.*
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.net.wifi.WpsInfo
 import android.net.wifi.p2p.*
 import android.os.AsyncTask
+import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
@@ -23,6 +21,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.*
@@ -163,7 +162,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			//  and only doing sth with the channel if it is not null and using the manager there
 
 			// TODO linter says this and other methods called need permission check, when / how often do we need to check these permissions?
-			mWiFiDirectManager?.connect(mChannel, wiFiDirectConnectionConfig, object : WifiP2pManager.ActionListener {
+			mWiFiDirectManager?.connect(mChannel, wiFiDirectConnectionConfig, object: WifiP2pManager.ActionListener {
 
 				override fun onSuccess() {
 					Log.d(LOGGING_TAG, "Initiation of connection to $wiFiDirectDeviceToConnectTo succeeded")
@@ -171,7 +170,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 				}
 
 				override fun onFailure(reason: Int) {
-					// TODO handle reason
+					// TODO handle reason nicely, display it to user
 					//  reason 	int: The reason for failure could be one of WifiP2pManager.P2P_UNSUPPORTED, WifiP2pManager.ERROR or WifiP2pManager.BUSY
 					//  https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.ActionListener.html#onFailure(int)
 					Log.i(
@@ -250,6 +249,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		}
 	}
 
+	// result callback from requesting dangerous permission access from the system, e.g. Location for WiFi Direct
 	override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
 		when (requestCode) {
 			ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE -> {
@@ -280,7 +280,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
     // This only initiates the discovery, this method immediately returns.
     // The discovery remains active in the background until a connection is initiated or a p2p group is formed.
-    mWiFiDirectManager?.discoverPeers(mChannel, object : WifiP2pManager.ActionListener {
+    mWiFiDirectManager?.discoverPeers(mChannel, object: WifiP2pManager.ActionListener {
 
 	    // success initiating the scan for peers
 	    override fun onSuccess() {
@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 	}
 
-	override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
+	override fun onActivityResult(requestCode: Int, resultCode: Int, resultIntentWithData: Intent?) {
 		// TODO linter says we should call the superclass here, but android example does not show it
 		//  https://developer.android.com/training/data-storage/shared/documents-files#perform-operations
 
@@ -385,75 +385,44 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			// Instead, a URI to that document will be contained in the return intent
 			// provided to this method as a parameter.
 			// Pull that URI using resultData.getData().
-			resultData?.data?.also { uri ->
+			var uri = resultIntentWithData?.data?.also { uri ->
 				Log.v(LOGGING_TAG, "Uri: $uri")
 				this.dumpImageMetaData(uri)
-				//showImage(uri)
+			} ?: TODO("handle error")
 
 
+			Log.d(LOGGING_TAG, "Currently connected WiFi Direct Device Info: ${connectedWiFiDirectInfo.toString()}")
 
+			val groupOwnerIpAddress: String = connectedWiFiDirectInfo?.groupOwnerAddress?.hostAddress ?: TODO("handle error when not already connected / change app control and navigation flow")
 
-				// TODO move in intent service or similar, else network runs on UI thread which results in error
+			// TODO extract in variable to use here and in server socket creation
+			val SERVER_PORT: Int = 8888
 
-				val context = applicationContext
-				if (connectedWiFiDirectInfo?.groupOwnerAddress == null) { TODO("handle error when not already connected / change app control and navigation flow") }
-				Log.d(LOGGING_TAG, connectedWiFiDirectInfo.toString())
-				val groupOwnerIpAddress: String = connectedWiFiDirectInfo!!.groupOwnerAddress.hostAddress
-				// TODO extract in variable to use here and in server socket creation
-				val port: Int = 8888
-				val socket = Socket()
-
-				try {
-					/**
-					 * Create a client socket with the host,
-					 * port, and timeout information.
-					 */
-					socket.bind(null)
-					socket.connect((InetSocketAddress(groupOwnerIpAddress, port)), 500)
-
-					/**
-					 * Create a byte stream from a JPEG file and pipe it to the output stream
-					 * of the socket. This data is retrieved by the server device.
-					 */
-					val outputStream = socket.getOutputStream()
-					val contentResolver = context.contentResolver
-					if (contentResolver.openInputStream(uri) == null) { return TODO("handle error") }
-					val inputStream: InputStream = contentResolver.openInputStream(uri)!!
-					copyFile(inputStream, outputStream)
-					outputStream.close()
-					inputStream.close()
-				} catch (e: FileNotFoundException) {
-					TODO("catch logic")
-				} catch (e: IOException) {
-					TODO("catch logic")
-				} finally {
-					/**
-					 * Clean up any open sockets when done
-					 * transferring or if an exception occurred.
-					 */
-					socket.takeIf { it.isConnected }?.apply {
-						close()
-					}
-				}
-
-
-
+			// start the Android Service for sending the file and pass it what to send and where
+			val intent: Intent = Intent(this, SendFileIntentService::class.java).apply {
+				action = SendFileIntentService.ACTION_SEND_FILE
+				data = uri
+				putExtra(SendFileIntentService.EXTRAS_GROUP_OWNER_ADDRESS, groupOwnerIpAddress)
+				putExtra(SendFileIntentService.EXTRAS_GROUP_OWNER_PORT, SERVER_PORT)
 			}
+
+			// TODO convert to foreground service and register right permission for it
+			startService(intent)
 		}
 	}
 
-	private fun dumpImageMetaData(uri: Uri) {
+	fun dumpImageMetaData(uriToImage: Uri) {
 		// The query, since it only applies to a single document, will only return
 		// one row. There's no need to filter, sort, or select fields, since we want
 		// all fields for one document.
-		val cursor: Cursor? = contentResolver.query(uri, null, null, null, null, null)
+		val cursor: Cursor? = contentResolver.query(uriToImage, null, null, null, null, null)
 
 		cursor?.use {
 			// moveToFirst() returns false if the cursor has 0 rows.  Very handy for
 			// "if there's anything to look at, look at it" conditionals.
 			if (it.moveToFirst()) {
 
-				// Note it's called "Display Name".  This is
+				// Note it's called "Display Name". This is
 				// provider-specific, and might not necessarily be the file name.
 				val displayName: String =
 					it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
@@ -500,42 +469,67 @@ fun copyFile(inputStream: InputStream, out: OutputStream): Boolean {
 }
 
 
-
+// receives a file sent via a network socket
+// TODO convert to foreground service that keeps running when app exits
 class FileServerAsyncTask(
 	private val context: Context,
 	private var statusText: TextView
 ) : AsyncTask<Void, Void, String?>() {
 
-	override fun doInBackground(vararg params: Void): String? {
-		/**
-		 * Create a server socket.
-		 */
-		val serverSocket = ServerSocket(8888)
-		return serverSocket.use {
-			/**
-			 * Wait for client connections. This call blocks until a
-			 * connection is accepted from a client.
-			 */
-			val socketToConnectedClient = serverSocket.accept()
-			/**
-			 * If this code is reached, a client has connected and transferred data
-			 * Save the input stream from the client as a JPEG file
-			 */
-			val destinationFile = File(
-				// TODO replace by internal storage directory
-				Environment.getExternalStorageDirectory().absolutePath +
-					"/${context.packageName}/wifip2pshared-${System.currentTimeMillis()}.jpg")
-			val dirs = File(destinationFile.parent)
+	companion object {
 
-			dirs.takeIf { it.doesNotExist() }?.apply {
-				mkdirs()
-			}
-			destinationFile.createNewFile()
-			val inputStream = socketToConnectedClient.getInputStream()
-			copyFile(inputStream, FileOutputStream(destinationFile))
-			serverSocket.close()
-			destinationFile.absolutePath
+		const val RECEIVED_FILES_DIRECTORY_NAME: String = "received_files"
+	}
+
+	override fun doInBackground(vararg params: Void): String? {
+
+		val SERVER_PORT: Int = 8888
+		val serverSocket = ServerSocket(SERVER_PORT)
+
+		// Wait for client connections. This call blocks until a connection is accepted from a client.
+		val socketToConnectedClient = serverSocket.accept()
+
+		// If this code is reached, a client has connected and transferred data
+		// Save the input stream from the client as a JPEG file as proof of concept
+
+		Log.d(LOGGING_TAG, "Client connected on port $SERVER_PORT")
+		// open/create subdirectory only readable by our own app in app private storage, beware that this is not created in the nobackup
+		// directory so if we use backup, we should not backup those big files in this subdirectory
+		// TODO POTENTIAL BREAKAGE filesDir gives us a subdirectory in the data directory named "files", we use this name in the content
+		//  provider sharable file paths definition, so if the name is different on an android version, the app breaks
+		val receivedFilesDirectory: File = File(context.filesDir, RECEIVED_FILES_DIRECTORY_NAME)
+
+		val destinationFile = File(
+			// TODO replace by letting user choose where to save or starting download while letting user choose or letting user choose
+			//  afterwards if wants to view, edit etc file, but choosing save location might make sense earlier. view, save, edit etc shortcuts
+			//  maybe also in transfer complete notification as action
+			receivedFilesDirectory.absolutePath +
+				"/wifi_direct_shared-${System.currentTimeMillis()}.jpg")
+
+		// TODO generally handle parent directory creation better and handle errors when we can't create every parent directory
+		if (destinationFile.parentFile?.doesNotExist() == true) {
+			// TODO why assert non-null needed, shouldn't this condition return false when parent file is null?
+			destinationFile.parentFile!!.mkdir()
 		}
+		/* possibly needed if creating deeper nested folder hierarchies
+		destinationFile.parent?.also {parent ->
+			val dirs = File(parent)
+			Log.d(LOGGING_TAG, "dirs from File(parent): $dirs")
+			if (dirs.doesNotExist()) {
+				Log.d(LOGGING_TAG, "creating parent directories for saving file")
+				dirs.mkdirs()
+			}
+		}
+		*/
+
+		// TODO handle when file already exists, but multiple transfers with same file name should be possible!
+		//  consider locking file access?
+		destinationFile.createNewFile()
+		val inputStream = socketToConnectedClient.getInputStream()
+		copyFile(inputStream, FileOutputStream(destinationFile))
+		serverSocket.close()
+
+		return destinationFile.absolutePath
 	}
 
 	private fun File.doesNotExist(): Boolean = !exists()
@@ -543,13 +537,107 @@ class FileServerAsyncTask(
 	/**
 	 * Start activity that can handle the JPEG image
 	 */
-	override fun onPostExecute(result: String?) {
-		result?.run {
-			statusText.text = "File copied - $result"
-			val intent = Intent(android.content.Intent.ACTION_VIEW).apply {
-				setDataAndType(Uri.parse("file://$result"), "image/*")
-			}
-			context.startActivity(intent)
+	override fun onPostExecute(resultPathReceivedFile: String?) {
+		resultPathReceivedFile?.run {
+
+
+			Log.d(LOGGING_TAG, "Received file and successfully written to $resultPathReceivedFile")
+			statusText.text = "File received: $resultPathReceivedFile"
+
+
+			val uriToFile: Uri = Uri.parse("file://$resultPathReceivedFile")
+
+			// WiFiDirectBroadcastReceiver passes the main activity as the context
+			// TODO this is ugly, extract method as general helper (for a context, because of content provider) or something
+			val mainActivity = context as MainActivity
+			mainActivity.dumpImageMetaData(uriToFile)
+
+
+			// TODO change type according to received file, image only used for testing!!!
+			val FILE_MIME_TYPE = "image/*"
+
+			val viewIntent: Intent = Intent(Intent.ACTION_VIEW)
+
+			// use content provider for content:// uri scheme used in newer versions for modern working secure sharing of files with other apps,
+			// but not all apps might support those instead of file:// uris, so still use them for older versions where they work
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+				// needed for app displaying the file having the temporary access to read from this uri
+				viewIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+				val contentProviderUri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", File(resultPathReceivedFile))
+				// TODO normalize data and type by using normalize method equivalent?
+        viewIntent.setDataAndType(contentProviderUri, FILE_MIME_TYPE)
+      } else {
+				// TODO normalize data and type by using normalize method equivalent?
+        viewIntent.setDataAndType(uriToFile, FILE_MIME_TYPE)
+      }
+
+			// TODO handle activity not found exception for when no app is found being able to display the file
+			context.startActivity(viewIntent)
+
 		}
 	}
 }
+
+// use IntentService for now for serial handling of requests on a worker thread without handling
+// thread creation ourselves, also Android Jobs are not
+// guaranteed to be executed immediately maybe (if app not in foreground at least?) and seem to have a execution limit of 10 min
+// We also want a notification present for the transfer so we want to use a foreground service anyway
+class SendFileIntentService: IntentService(SendFileIntentService::class.simpleName) {
+
+	companion object {
+
+		private const val SOCKET_TIMEOUT_MILLISECONDS: Int = 500
+		// TODO make modular for changes in package name, maybe with global constant or string resource for package name?
+		//  where and how to register and then use like registering as field of class in this way:
+		//  val ACTION_SEND_FILE: String = "${applicationContext.packageName}.wifi_direct.SEND_FILE"
+		const val ACTION_SEND_FILE: String = "dev.akampf.fileshare.wifi_direct.SEND_FILE"
+		// TODO make modular to be usable with any target for the server connection, not only the group owner
+		const val EXTRAS_GROUP_OWNER_ADDRESS: String = "group_owner_ip_address"
+		const val EXTRAS_GROUP_OWNER_PORT: String = "group_owner_server_port"
+
+	}
+	override fun onHandleIntent(workIntent: Intent?) {
+		// Gets data from the incoming Intent
+
+		var dataUri= workIntent?.data ?: TODO("handle error")
+		val serverPort: Int = workIntent.getIntExtra(EXTRAS_GROUP_OWNER_PORT, 0).also {
+			if(it == 0) { TODO("handle error") }
+		}
+		val groupOwnerIpAddress = workIntent.getStringExtra(EXTRAS_GROUP_OWNER_ADDRESS) ?: TODO("handle error")
+
+
+		val socket = Socket()
+
+		try {
+			// bind with a ip address and port given to us by the system cause we initiate the connection and don't care for the outgoing port
+			// and ip address
+			socket.bind(null)
+			// TODO handle connection timing out
+			socket.connect((InetSocketAddress(groupOwnerIpAddress, serverPort)), SOCKET_TIMEOUT_MILLISECONDS)
+
+
+			// Create a byte stream from the file and pipe it to the output stream
+			// of the socket. This data is retrieved by the server device.
+			val outputStream: OutputStream = socket.getOutputStream()
+			val inputStream: InputStream = contentResolver.openInputStream(dataUri) ?: TODO("handle error")
+			copyFile(inputStream, outputStream)
+			// TODO really close here and not in finally? use java try with resources / python with equivalent?
+			outputStream.close()
+			inputStream.close()
+		} catch (e: FileNotFoundException) {
+			TODO("handle error appropriately")
+		} catch (e: IOException) {
+			TODO("handle error appropriately")
+		} finally {
+			/**
+			 * Clean up any open sockets when done
+			 * transferring or if an exception occurred.
+			 */
+			if (socket.isConnected) {
+				socket.close()
+			}
+		}
+
+	}
+}
+

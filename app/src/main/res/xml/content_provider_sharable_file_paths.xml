@@ -1,0 +1,7 @@
+<!-- list paths that are sharable with the FileProvider content provider and the names appearing in the generated content uri before the filename -->
+
+<paths>
+    <!-- TODO use constant / variable for this directory name in whole app -->
+    <!-- files-path element specifies directories in the app private files directory -->
+    <files-path path="received_files/" name="received_files" />
+</paths>

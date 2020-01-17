@@ -60,13 +60,36 @@
 		android:roundIcon="@mipmap/ic_launcher_round"
 		android:supportsRtl="true"
 		android:theme="@style/AppTheme">
+		<!--
+            Because android:exported is set to "false",
+            the service is only available to this app.
+        -->
+		<!-- TODO provide android:description as user visible service name -->
+		<!-- TODO consider executing in separate process by specifying attribute in the service here -->
+		<service
+			android:name=".SendFileIntentService"
+			android:exported="false"/>
+
 		<activity android:name=".MainActivity">
+			<!-- make this activity appear openable from the home screen / launcher -->
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
-
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+
+		<!-- file provider registration needed to share files with other apps via content uris for temporary read access etc -->
+		<provider
+			android:name="androidx.core.content.FileProvider"
+			android:authorities="dev.akampf.fileshare.provider"
+			android:grantUriPermissions="true"
+			android:exported="false">
+			<!-- specify where the file specifying sharable paths and the mapped name in the content uri are specified: -->
+			<meta-data
+				android:name="android.support.FILE_PROVIDER_PATHS"
+				android:resource="@xml/content_provider_sharable_file_paths" />
+		</provider>
+
 	</application>
 
 </manifest>
