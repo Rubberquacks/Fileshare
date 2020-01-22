@@ -9,7 +9,6 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
-import android.net.wifi.WpsInfo
 import android.net.wifi.p2p.*
 import android.os.AsyncTask
 import android.os.Build
@@ -78,13 +77,11 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			field = wiFiDirectEnabled
 		}
 
-
+	// TODO we should also check if location services are enabled by the user and prompt for that if not the case
 	// TODO luckily setter is not called on initialization with false, since this could be wrong (permission already granted), but still
 	//  initialization with false does not really seem clean, maybe initialize with null if not accessed except in setter (no null safety)?
 	private var mFineLocationPermissionGranted: Boolean = false
 		set(fineLocationPermissionGranted_new_value) {
-
-			Log.d(LOGGING_TAG, "old value $field new value: $fineLocationPermissionGranted_new_value")
 
 			if (fineLocationPermissionGranted_new_value) {
 				if (mWiFiDirectEnabled) {
@@ -128,16 +125,16 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		}
 
 		if (wiFiDirectPeers.isEmpty()) {
-			Log.d(LOGGING_TAG, "No devices found")
+			Log.d(LOGGING_TAG, "No WiFi Direct devices found in current scan")
 		}
 	}
 
 
 	// the RecyclerView in the fragment calls this method when a view in it was clicked
-	override fun onListFragmentInteraction(wiFiDirectDevice: WifiP2pDevice) {
-		wiFiDirectDevice.let {clickedItem ->
-			Log.i(LOGGING_TAG, "$clickedItem\n has been clicked")
-			connectToWiFiDirectDevice(wiFiDirectDevice)
+	override fun onListFragmentInteraction(clickedWiFiDirectDevice: WifiP2pDevice) {
+		clickedWiFiDirectDevice.let { clickedDeviceItem ->
+			Log.i(LOGGING_TAG, "$clickedDeviceItem\n has been clicked")
+			connectToWiFiDirectDevice(clickedWiFiDirectDevice)
 		}
 	}
 
@@ -146,13 +143,12 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		val wiFiDirectConnectionConfig = WifiP2pConfig().apply {
 			deviceAddress = wiFiDirectDeviceToConnectTo.deviceAddress
 			// TODO use other wps setup method if PBC not supported or is PBC always supported by laptops, tablets, phones, etc?
-			// TODO is that needed? not done here: https://developer.android.com/guide/topics/connectivity/wifip2p#connect
-			//  PBC is default value
-			wps.setup = WpsInfo.PBC
+			//  WpsInfo.PBC is default value
+			// wps.setup = here_is_the_mode_to_use
 		}
 
 		// initiates WiFi Direct group negotiation with target or invite device to existing group where this device is already part of (because
-		// it has joined or hat is created itself)
+		// it has joined or has created the group itself)
 		// TODO at this point another device was found, so the manager was clearly initiated, should we just assume that, assert that or catch
 		//  the case that it was null and display an error / handle it appropriately?
 		mChannel.also {
@@ -166,7 +162,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 				override fun onSuccess() {
 					Log.d(LOGGING_TAG, "Initiation of connection to $wiFiDirectDeviceToConnectTo succeeded")
-					// WiFiDirectBroadcastReceiver notifies us. Ignore for now.
+					// We get notified by broadcast when the connection is really there
 				}
 
 				override fun onFailure(reason: Int) {
@@ -314,7 +310,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		super.onResume()
 
 
-		Log.d(LOGGING_TAG, "registering wifi direct broadcast receiver: $mWiFiDirectBroadcastReceiver")
+		Log.d(LOGGING_TAG, "registering wifi direct broadcast receiver... : $mWiFiDirectBroadcastReceiver")
 		registerReceiver(mWiFiDirectBroadcastReceiver, mWiFiDirectIntentFilter)
 
 		val haveFineLocationPermission = havePermissionCurrently(ACCESS_FINE_LOCATION_PERMISSION)
@@ -343,9 +339,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 	// TODO consider using ACTION_GET_CONTENT because we only need a copy and not permanent access to the file if it changes and/or modify the file and write it back
 	//  https://developer.android.com/guide/topics/providers/document-provider#client
-	/**
-	 * Fires an intent to spin up the "file chooser" UI and select a file.
-	 */
+	// Fires an intent to spin up the "file chooser" UI and select a file.
 	private fun getOpenableFilePickedByUser() {
 
 		// ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
@@ -366,14 +360,14 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 	}
 
 
-	/** Called when the user taps the Send button */
 	fun onClickedOpenFileButton(view: View) {
+		// result is delivered in callback
 		this.getOpenableFilePickedByUser()
 
 	}
 
 	override fun onActivityResult(requestCode: Int, resultCode: Int, resultIntentWithData: Intent?) {
-		// TODO linter says we should call the superclass here, but android example does not show it
+		// TODO linter says we should call the superclass here, but official android example does not show it
 		//  https://developer.android.com/training/data-storage/shared/documents-files#perform-operations
 
 		// The ACTION_OPEN_DOCUMENT intent was sent with the request code
@@ -384,14 +378,13 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			// The document selected by the user won't be returned in the intent.
 			// Instead, a URI to that document will be contained in the return intent
 			// provided to this method as a parameter.
-			// Pull that URI using resultData.getData().
-			var uri = resultIntentWithData?.data?.also { uri ->
+			val uriOfSelectedFile: Uri = resultIntentWithData?.data?.also { uri ->
 				Log.v(LOGGING_TAG, "Uri: $uri")
 				this.dumpImageMetaData(uri)
 			} ?: TODO("handle error")
 
 
-			Log.d(LOGGING_TAG, "Currently connected WiFi Direct Device Info: ${connectedWiFiDirectInfo.toString()}")
+			Log.d(LOGGING_TAG, "Currently connected WiFi Direct Device Info: $connectedWiFiDirectInfo")
 
 			val groupOwnerIpAddress: String = connectedWiFiDirectInfo?.groupOwnerAddress?.hostAddress ?: TODO("handle error when not already connected / change app control and navigation flow")
 
@@ -401,7 +394,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			// start the Android Service for sending the file and pass it what to send and where
 			val intent: Intent = Intent(this, SendFileIntentService::class.java).apply {
 				action = SendFileIntentService.ACTION_SEND_FILE
-				data = uri
+				data = uriOfSelectedFile
 				putExtra(SendFileIntentService.EXTRAS_GROUP_OWNER_ADDRESS, groupOwnerIpAddress)
 				putExtra(SendFileIntentService.EXTRAS_GROUP_OWNER_PORT, SERVER_PORT)
 			}
@@ -435,14 +428,14 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 				// a rule, check if it's null before assigning to an int.  This will
 				// happen often:  The storage API allows for remote files, whose
 				// size might not be locally known.
-				val size: String = if (!it.isNull(sizeIndex)) {
+				val fileSize: String = if (!it.isNull(sizeIndex)) {
 					// Technically the column stores an int, but cursor.getString()
 					// will do the conversion automatically.
 					it.getString(sizeIndex)
 				} else {
 					"Unknown"
 				}
-				Log.v(LOGGING_TAG, "Size: $size")
+				Log.v(LOGGING_TAG, "File size: $fileSize")
 			}
 		}
 	}
@@ -452,7 +445,9 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 
 fun copyFile(inputStream: InputStream, out: OutputStream): Boolean {
-	// TODO does this limit the file size? where is this buffer used multiple times to allow larger files?
+	// TODO good buffer size for speed?
+	// this only determines how much is read and then written to the output stream before new data is read, so this does not limit
+	// transferable file size
 	val buffer = ByteArray(1024)
 	var numberOfBytesRead: Int
 	try {
@@ -526,6 +521,7 @@ class FileServerAsyncTask(
 		//  consider locking file access?
 		destinationFile.createNewFile()
 		val inputStream = socketToConnectedClient.getInputStream()
+		// TODO handle interrupted and partial transfers correctly, don't display / save
 		copyFile(inputStream, FileOutputStream(destinationFile))
 		serverSocket.close()
 
@@ -599,7 +595,7 @@ class SendFileIntentService: IntentService(SendFileIntentService::class.simpleNa
 	override fun onHandleIntent(workIntent: Intent?) {
 		// Gets data from the incoming Intent
 
-		var dataUri= workIntent?.data ?: TODO("handle error")
+		val dataUri = workIntent?.data ?: TODO("handle error")
 		val serverPort: Int = workIntent.getIntExtra(EXTRAS_GROUP_OWNER_PORT, 0).also {
 			if(it == 0) { TODO("handle error") }
 		}
@@ -629,10 +625,8 @@ class SendFileIntentService: IntentService(SendFileIntentService::class.simpleNa
 		} catch (e: IOException) {
 			TODO("handle error appropriately")
 		} finally {
-			/**
-			 * Clean up any open sockets when done
-			 * transferring or if an exception occurred.
-			 */
+			// Clean up any open sockets when done
+			// transferring or if an exception occurred.
 			if (socket.isConnected) {
 				socket.close()
 			}
