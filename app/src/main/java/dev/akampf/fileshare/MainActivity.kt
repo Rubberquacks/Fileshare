@@ -557,8 +557,10 @@ class FileServerAsyncTask(
 			// use content provider for content:// uri scheme used in newer versions for modern working secure sharing of files with other apps,
 			// but not all apps might support those instead of file:// uris, so still use them for older versions where they work
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-				// needed for app displaying the file having the temporary access to read from this uri
+				// needed for app displaying the file having the temporary access to read from this uri, either uri must be put in data of intent
+				// or `Context.grantUriPermission` must be called for the target package
 				viewIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+				// the authority argument of `getUriForFile` must be the same as the authority of the file provider defined in the AndroidManifest!
 				val contentProviderUri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", File(resultPathReceivedFile))
 				// TODO normalize data and type by using normalize method equivalent?
         viewIntent.setDataAndType(contentProviderUri, FILE_MIME_TYPE)
