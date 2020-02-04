@@ -79,6 +79,7 @@
 		</activity>
 
 		<!-- file provider registration needed to share files with other apps via content uris for temporary read access etc -->
+		<!-- TODO define authorities string in a way that adapts to package name changes -->
 		<provider
 			android:name="androidx.core.content.FileProvider"
 			android:authorities="dev.akampf.fileshare.provider"
