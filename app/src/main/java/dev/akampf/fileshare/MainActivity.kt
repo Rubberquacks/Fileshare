@@ -131,10 +131,10 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 
 	// the RecyclerView in the fragment calls this method when a view in it was clicked
-	override fun onListFragmentInteraction(clickedWiFiDirectDevice: WifiP2pDevice) {
-		clickedWiFiDirectDevice.let { clickedDeviceItem ->
+	override fun onListFragmentInteraction(wiFiDirectDevice: WifiP2pDevice) {
+		wiFiDirectDevice.let { clickedDeviceItem ->
 			Log.i(LOGGING_TAG, "$clickedDeviceItem\n has been clicked")
-			connectToWiFiDirectDevice(clickedWiFiDirectDevice)
+			connectToWiFiDirectDevice(wiFiDirectDevice)
 		}
 	}
 
@@ -263,7 +263,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 				return
 			}
 
-			// Add other 'when' lines to check for other
+			// Add other 'when' cases here to check if there are other
 			// permissions this app might have requested.
 			else -> {
 				// Ignore all other requests.
@@ -331,13 +331,14 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		Log.d(LOGGING_TAG, "onPause start")
 		super.onPause()
 		mWiFiDirectBroadcastReceiver?.also { broadcastReceiver ->
-			Log.d(LOGGING_TAG, "unregistering wifi direct broadcast receiver: $broadcastReceiver")
+			Log.d(LOGGING_TAG, "unregistering wifi direct broadcast receiver... : $broadcastReceiver")
 			unregisterReceiver(broadcastReceiver)
 		}
 	}
 
 
 	// TODO consider using ACTION_GET_CONTENT because we only need a copy and not permanent access to the file if it changes and/or modify the file and write it back
+	//  If sending big file, how long is access guaranteed? copy to own directory first if space available? better for retrying later? better solution?
 	//  https://developer.android.com/guide/topics/providers/document-provider#client
 	// Fires an intent to spin up the "file chooser" UI and select a file.
 	private fun getOpenableFilePickedByUser() {
@@ -347,6 +348,8 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		val intent: Intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
 			// Filter to only show results that can be "opened", such as a
 			// file (as opposed to a list of contacts or timezones)
+			// Without this we could not simply get a byte stream from the content to share to read its data, thus requiring special
+			// handling to transfer its contents. But this should be possible in the future, too. Like sending contacts. #enhancement
 			addCategory(Intent.CATEGORY_OPENABLE)
 
 			// Filter to show only images, using the image MIME data type.
@@ -380,7 +383,7 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 			// provided to this method as a parameter.
 			val uriOfSelectedFile: Uri = resultIntentWithData?.data?.also { uri ->
 				Log.v(LOGGING_TAG, "Uri: $uri")
-				this.dumpImageMetaData(uri)
+				this.dumpContentUriMetaData(uri)
 			} ?: TODO("handle error")
 
 
@@ -404,10 +407,11 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 		}
 	}
 
-	fun dumpImageMetaData(uriToImage: Uri) {
+	fun dumpContentUriMetaData(uriToImage: Uri) {
 		// The query, since it only applies to a single document, will only return
 		// one row. There's no need to filter, sort, or select fields, since we want
 		// all fields for one document.
+		// TODO use projection to only needed columns needed to not waste resources
 		val cursor: Cursor? = contentResolver.query(uriToImage, null, null, null, null, null)
 
 		cursor?.use {
@@ -417,54 +421,109 @@ class MainActivity : AppCompatActivity(), DeviceFragment.OnListFragmentInteracti
 
 				// Note it's called "Display Name". This is
 				// provider-specific, and might not necessarily be the file name.
-				val displayName: String =
+				// TODO handle potential exception and null return value
+				val displayName=
 					it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
 				Log.v(LOGGING_TAG, "Display Name: $displayName")
 
-				val sizeIndex: Int = it.getColumnIndex(OpenableColumns.SIZE)
+				// returns -1 if column with this name cannot be found
+				val columnIndexForFileSize: Int = it.getColumnIndex(OpenableColumns.SIZE).also { columnIndex -> if(columnIndex == -1) {TODO("handle error")} }
+
 				// If the size is unknown, the value stored is null.  But since an
 				// int can't be null in Java, the behavior is implementation-specific,
 				// which is just a fancy term for "unpredictable".  So as
 				// a rule, check if it's null before assigning to an int.  This will
 				// happen often:  The storage API allows for remote files, whose
 				// size might not be locally known.
-				val fileSize: String = if (!it.isNull(sizeIndex)) {
+				val fileSize = if (!it.isNull(columnIndexForFileSize)) {
 					// Technically the column stores an int, but cursor.getString()
 					// will do the conversion automatically.
-					it.getString(sizeIndex)
+					// TODO handle potential exception (and null return value?) if for example file size is unknown
+					it.getString(columnIndexForFileSize)
 				} else {
 					"Unknown"
 				}
-				Log.v(LOGGING_TAG, "File size: $fileSize")
+				Log.v(LOGGING_TAG, "File size: $fileSize bytes")
+				// everything went well, no uncaught errors, return without logging an error
+				return
 			}
 		}
+		Log.w(LOGGING_TAG, "couldn't get metadata of file with uri $uriToImage")
 	}
-
-
 }
 
 
-fun copyFile(inputStream: InputStream, out: OutputStream): Boolean {
-	// TODO good buffer size for speed?
+fun getDisplayNameFromUri(context: Context, uri: Uri): String {
+
+	var displayName: String? = null
+
+
+	// TODO use projection for performance
+	// this returns null if the uri does not use the content:// scheme
+	val cursor: Cursor? = context.contentResolver.query(uri, null, null, null, null, null)
+
+	if (cursor?.moveToFirst() == true) {
+		// Note it's called "Display Name". This is
+		// provider-specific, and might not necessarily be the file name.
+		val columnIndex: Int = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+		if (columnIndex == -1) {
+			Log.w(LOGGING_TAG, "There is no DISPLAY_NAME for the queried uri in the associated content resolver. Queried uri: $uri")
+		} else {
+			try {
+				val displayNameFromContentResolver: String? = cursor.getString(columnIndex)
+				if (displayNameFromContentResolver == null) {
+					Log.w(LOGGING_TAG, "")
+					Log.w(LOGGING_TAG, "DISPLAY_NAME value null returned from content resolver associated with uri: $uri")
+				} else {
+					// TODO don't use this value when it is an empty string?
+					displayName = displayNameFromContentResolver
+				}
+
+				// depending on implementation, `cursor.getString()` might throw an exception when column value is not a String or null
+			} catch (e: Exception) {
+				Log.w(LOGGING_TAG, "Error when getting DISPLAY_NAME, even though the column exists in content resolver associated with uri: $uri")
+				Log.w(LOGGING_TAG, e.toString())
+				Log.w(LOGGING_TAG, e.stackTrace.toString())
+			}
+		}
+	}
+	cursor?.close()
+
+	// fallback name if we could not get a display name from the content resolver
+	if (displayName == null) {
+		// uri.toString() is guaranteed to not return null, so we always return a non-null string, but possibly empty TODO change this?
+		displayName = uri.lastPathSegment ?: uri.encodedPath ?: uri.toString()
+	}
+
+
+	return displayName
+
+}
+// TODO add flush at the end?
+fun copyBetweenByteStreamsAndFlush(inputStream: InputStream, outputStream: OutputStream): Boolean {
+	// TODO good buffer size for speed? just use `BufferedOutputStream` and `BufferedInputStream` instead of own buffer?
 	// this only determines how much is read and then written to the output stream before new data is read, so this does not limit
 	// transferable file size
 	val buffer = ByteArray(1024)
 	var numberOfBytesRead: Int
 	try {
 		while (inputStream.read(buffer).also { numberOfBytesRead = it } != -1) {
-			out.write(buffer, 0, numberOfBytesRead)
+			// read bytes from buffer and write to the output stream with 0 offset
+			outputStream.write(buffer, 0, numberOfBytesRead)
 		}
-		out.close()
-		inputStream.close()
+		// flush stream after writing data in case it was called with a buffered output stream and not a raw
+		// output stream, where flushing does nothing
+		outputStream.flush()
 	} catch (e: IOException) {
-		Log.e(LOGGING_TAG, e.toString())
+		Log.e(LOGGING_TAG, "TODO handle error: $e")
+		Log.e(LOGGING_TAG, e.stackTrace.toString())
 		return false
 	}
 	return true
 }
 
 
-// receives a file sent via a network socket
+// receives a file sent via a network socket, currently only works for receiving files, for sending the other device must be the server
 // TODO convert to foreground service that keeps running when app exits
 class FileServerAsyncTask(
 	private val context: Context,
@@ -479,33 +538,61 @@ class FileServerAsyncTask(
 	override fun doInBackground(vararg params: Void): String? {
 
 		val SERVER_PORT: Int = 8888
+
+
+		// TODO handle io exceptions, wrap nearly all of code in this method in try except and handle important exceptions for status reporting
+		//  separately like rethrowing own exception which is handled in own catch clause or saving failure status in variable?
+
+
+		Log.i(LOGGING_TAG, "Starting server socket on port $SERVER_PORT")
+		// Consider using less used but fixed port, ephemeral port, or fixed and likely not blocked port. Fixed might be better for remote
+		// searching through network for available devices.
 		val serverSocket = ServerSocket(SERVER_PORT)
 
-		// Wait for client connections. This call blocks until a connection is accepted from a client.
+		Log.i(LOGGING_TAG, "We are now accepting connections to ip ${serverSocket.inetAddress} on port ${serverSocket.localPort}.")
+		// Wait for client connections. This call blocks until a connection from a client is accepted.
 		val socketToConnectedClient = serverSocket.accept()
+		Log.i(LOGGING_TAG, "Connection from client with ip ${socketToConnectedClient.inetAddress} from port ${socketToConnectedClient.port} accepted.")
 
-		// If this code is reached, a client has connected and transferred data
-		// Save the input stream from the client as a JPEG file as proof of concept
 
-		Log.d(LOGGING_TAG, "Client connected on port $SERVER_PORT")
-		// open/create subdirectory only readable by our own app in app private storage, beware that this is not created in the nobackup
+
+
+		// Save the input stream from the client as a file in internal app directory as proof of concept
+
+
+
+		val inputStreamFromConnectedDevice = socketToConnectedClient.getInputStream()
+
+		val bufferedInputStream: BufferedInputStream = BufferedInputStream(inputStreamFromConnectedDevice)
+		val dataInputStream: DataInputStream = DataInputStream(bufferedInputStream)
+
+		// read file name with readUTF function for now, then create file in filesystem to write received data to
+		// TODO this is user supplied data transferred over to this device, we can't trust its content, how to escape properly for using as
+		//  file name for saving to disk etc? what if contains illegal characters for filename, like slash, or just non-printable ones?
+		//  what if file name is the empty string?
+		val fileName: String = dataInputStream.readUTF()
+
+
+
+		// open/create subdirectory only readable by our own app in app private storage, note that this is not created in the `nobackup`
 		// directory so if we use backup, we should not backup those big files in this subdirectory
 		// TODO POTENTIAL BREAKAGE filesDir gives us a subdirectory in the data directory named "files", we use this name in the content
-		//  provider sharable file paths definition, so if the name is different on an android version, the app breaks
+		//  provider (file provider) sharable file paths definition, so if the name is different on another android version, the app breaks
 		val receivedFilesDirectory: File = File(context.filesDir, RECEIVED_FILES_DIRECTORY_NAME)
 
 		val destinationFile = File(
 			// TODO replace by letting user choose where to save or starting download while letting user choose or letting user choose
 			//  afterwards if wants to view, edit etc file, but choosing save location might make sense earlier. view, save, edit etc shortcuts
 			//  maybe also in transfer complete notification as action
-			receivedFilesDirectory.absolutePath +
-				"/wifi_direct_shared-${System.currentTimeMillis()}.jpg")
+			receivedFilesDirectory.absolutePath, fileName)
 
-		// TODO generally handle parent directory creation better and handle errors when we can't create every parent directory
+		// TODO generally handle parent directory creation better and handle errors when we can't create every parent directory, throw error
+		//  and exit app when parent directory that should always exist is not there
 		if (destinationFile.parentFile?.doesNotExist() == true) {
 			// TODO why assert non-null needed, shouldn't this condition return false when parent file is null?
 			destinationFile.parentFile!!.mkdir()
 		}
+
 		/* possibly needed if creating deeper nested folder hierarchies
 		destinationFile.parent?.also {parent ->
 			val dirs = File(parent)
@@ -519,11 +606,69 @@ class FileServerAsyncTask(
 
 		// TODO handle when file already exists, but multiple transfers with same file name should be possible!
 		//  consider locking file access?
+		//  don't transfer file when it is the same file, check hash
+		//  handle other io and security errors
 		destinationFile.createNewFile()
-		val inputStream = socketToConnectedClient.getInputStream()
+
+		val fileOutputStreamToDestinationFile: FileOutputStream
+		try {
+			fileOutputStreamToDestinationFile = FileOutputStream(destinationFile)
+		} catch (e: Exception) {
+			// !!!
+			// THIS CODE SHOULD NEVER BE REACHED!
+			//
+			// This should never happen as the path to the file is internally constructed in the app only influenced by the received name
+			// for the content. The constructed path should always be existent and writable as it is in an app private directory. So neither a
+			// FileNotFoundException nor a SecurityException should be possible to be thrown.
+			// !!!
+			Log.e(LOGGING_TAG, "Error on opening file in app private directory, which should always be possible!")
+			Log.e(LOGGING_TAG, e.toString())
+			Log.e(LOGGING_TAG, e.stackTrace.toString())
+			// Something is severely wrong with the state of the app (maybe a remote device tried to attack us), so it should throw
+			// an error which is NOT caught by some other code and exit the app, meaning we should not try to recover from an undefined state
+			// or from an attack but we should fail safely by quitting
+			Log.e(LOGGING_TAG, "App is in an undefined state, exiting app...")
+			// TODO how to guarantee exiting all of the app without something intercepting it? ensure exceptions from this method are not handled
+			throw e
+		}
+
+
+
+
 		// TODO handle interrupted and partial transfers correctly, don't display / save
-		copyFile(inputStream, FileOutputStream(destinationFile))
-		serverSocket.close()
+		// TODO this is user supplied data transferred over to this device, we can't trust its content, should we do some checks for its
+		//  content in general (anti-malware etc) or for methods and programs that use it like processing in this app, FileProvider, etc?
+		val contentSuccessfullyReceived: Boolean = copyBetweenByteStreamsAndFlush(inputStreamFromConnectedDevice, fileOutputStreamToDestinationFile)
+
+
+		// close the outermost stream to call its flush method before it in turn closes any underlying streams and used resources
+		try {
+
+			// TODO why is socket to connected client not closed after closing input stream of it?
+			dataInputStream.close()
+
+			fileOutputStreamToDestinationFile.close()
+
+			// closes the server socket, which is still bound to the ip address and port to receive connections with `accept()`
+			// this releases its resources and makes it possible to bind to this port and ip address again by this or other apps
+			// This is separate from the socket to the connected client.
+			serverSocket.close()
+		} catch (e: IOException) {
+			// error when closing streams and socket
+			// TODO should this be ignored and is it bad when e.g. the output stream to the saved file has an error on close? just check
+			//  integrity of received content after writing to file (not only when in memory)? still resource leak?
+			Log.e(LOGGING_TAG, e.toString())
+			Log.e(LOGGING_TAG, e.stackTrace.toString())
+			throw e
+		}
+
+
+
+
+		if (contentSuccessfullyReceived) {
+			Log.i(LOGGING_TAG, "File name and content successfully received and written, error on resources closing " +
+					"might still have occurred")
+		}
 
 		return destinationFile.absolutePath
 	}
@@ -533,43 +678,48 @@ class FileServerAsyncTask(
 	/**
 	 * Start activity that can handle the JPEG image
 	 */
-	override fun onPostExecute(resultPathReceivedFile: String?) {
-		resultPathReceivedFile?.run {
+	override fun onPostExecute(absolutePathReceivedFile: String?) {
+		absolutePathReceivedFile?.run {
 
 
-			Log.d(LOGGING_TAG, "Received file and successfully written to $resultPathReceivedFile")
-			statusText.text = "File received: $resultPathReceivedFile"
+			Log.d(LOGGING_TAG, "File was written to $absolutePathReceivedFile")
+			statusText.text = "File received: $absolutePathReceivedFile"
 
 
-			val uriToFile: Uri = Uri.parse("file://$resultPathReceivedFile")
+			val uriToFile: Uri = Uri.parse("file://$absolutePathReceivedFile")
 
 			// WiFiDirectBroadcastReceiver passes the main activity as the context
-			// TODO this is ugly, extract method as general helper (for a context, because of content provider) or something
+			// TODO this is ugly, extract method as general helper (for a context, because of content provider) or just globally
 			val mainActivity = context as MainActivity
-			mainActivity.dumpImageMetaData(uriToFile)
+			// TODO change to display info with other method cause this only works with the content:// scheme and not file:// urls!
+			mainActivity.dumpContentUriMetaData(uriToFile)
 
 
-			// TODO change type according to received file, image only used for testing!!!
-			val FILE_MIME_TYPE = "image/*"
+			// open saved file for viewing in a supported app
 
 			val viewIntent: Intent = Intent(Intent.ACTION_VIEW)
 
 			// use content provider for content:// uri scheme used in newer versions for modern working secure sharing of files with other apps,
-			// but not all apps might support those instead of file:// uris, so still use them for older versions where they work
+			// but not all apps might support those instead of file:// uris, so still use them for older versions where they work for greater
+			// compatibility
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 				// needed for app displaying the file having the temporary access to read from this uri, either uri must be put in data of intent
 				// or `Context.grantUriPermission` must be called for the target package
+				// TODO explain why this is needed / what exactly is needed more clearly
 				viewIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+
 				// the authority argument of `getUriForFile` must be the same as the authority of the file provider defined in the AndroidManifest!
-				val contentProviderUri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", File(resultPathReceivedFile))
-				// TODO normalize data and type by using normalize method equivalent?
-        viewIntent.setDataAndType(contentProviderUri, FILE_MIME_TYPE)
+				// TODO extract authority in global variable or resource to reuse in manifest and code
+				val fileProviderUri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", File(absolutePathReceivedFile))
+
+				// normalizing the uri to match android best practices for schemes: makes the scheme component lowercase
+        viewIntent.setDataAndNormalize(fileProviderUri)
       } else {
-				// TODO normalize data and type by using normalize method equivalent?
-        viewIntent.setDataAndType(uriToFile, FILE_MIME_TYPE)
+				// normalizing the uri to match android best practices for schemes: makes the scheme component lowercase
+        viewIntent.setDataAndNormalize(uriToFile)
       }
 
-			// TODO handle activity not found exception for when no app is found being able to display the file
+			// TODO handle activity not found exception which is thrown when no app is found being able to display the file
 			context.startActivity(viewIntent)
 
 		}
@@ -609,30 +759,74 @@ class SendFileIntentService: IntentService(SendFileIntentService::class.simpleNa
 		try {
 			// bind with a ip address and port given to us by the system cause we initiate the connection and don't care for the outgoing port
 			// and ip address
+			// "If the address is null, then the system will pick up an ephemeral port and a valid local address to bind the socket."
+			// If not passing null, meaning specifying port and ip, we might need to catch an IllegalArgumentException!
 			socket.bind(null)
 			// TODO handle connection timing out
 			socket.connect((InetSocketAddress(groupOwnerIpAddress, serverPort)), SOCKET_TIMEOUT_MILLISECONDS)
 
 
-			// Create a byte stream from the file and pipe it to the output stream
-			// of the socket. This data is retrieved by the server device.
-			val outputStream: OutputStream = socket.getOutputStream()
-			val inputStream: InputStream = contentResolver.openInputStream(dataUri) ?: TODO("handle error")
-			copyFile(inputStream, outputStream)
-			// TODO really close here and not in finally? use java try with resources / python with equivalent?
-			outputStream.close()
-			inputStream.close()
+			// Currently, we first send the file name and then the raw file data. These data (name and content) are then retrieved by the server
+			// socket.
+			val outputStreamConnectedDevice: OutputStream = socket.getOutputStream()
+
+
+			val bufferedOutputStream: BufferedOutputStream = BufferedOutputStream(outputStreamConnectedDevice)
+			val dataOutputStream: DataOutputStream = DataOutputStream(bufferedOutputStream)
+
+
+
+			// TODO don't use this when it is an empty string?
+			val displayName = getDisplayNameFromUri(this, dataUri)
+			Log.d(LOGGING_TAG, "Display name being sent is: $displayName")
+
+
+			// this writes the length of the string and then a string of the display name of the content in "modified utf8"
+			dataOutputStream.writeUTF(displayName)
+			// Without this flush, the transfer will not work. Probably because the data output stream gets flushed on close and by then
+			// the actual content is already written to the underlying output stream before the buffered data of the file name got written to it.
+			// This results in the file name not being at the beginning of the data in the stream.
+			// TODO But checking how many bytes were written on the underlying output stream suggests it is already written to it without the flush,
+			//  so no idea if this really was the problem and this is the appropriate fix... :/
+			dataOutputStream.flush()
+
+
+
+
+			// Create a byte stream from the file and copy it to the output stream of the socket.
+			val inputStreamOfContentToTransfer: InputStream = contentResolver.openInputStream(dataUri) ?: TODO("handle error")
+			val wasContentSuccessfullyTransferred: Boolean = copyBetweenByteStreamsAndFlush(inputStreamOfContentToTransfer, outputStreamConnectedDevice)
+
+			if (wasContentSuccessfullyTransferred) {
+				Log.i(LOGGING_TAG, "File name and content successfully transferred, error on resources closing might still occur")
+			}
+
+			// only close outermost stream here because it will flush its content and also close all underlying streams, which in turn flushes
+			// them, as well as releasing all used resources
+			dataOutputStream.close()
+
+			inputStreamOfContentToTransfer.close()
 		} catch (e: FileNotFoundException) {
+			Log.e(LOGGING_TAG, e.toString())
+			Log.e(LOGGING_TAG, e.stackTrace.toString())
 			TODO("handle error appropriately")
 		} catch (e: IOException) {
+			Log.e(LOGGING_TAG, e.toString())
+			Log.e(LOGGING_TAG, e.stackTrace.toString())
 			TODO("handle error appropriately")
 		} finally {
 			// Clean up any open sockets when done
 			// transferring or if an exception occurred.
+			// TODO close outermost stream here in finally instead to also close when exception while transferring (going in catch clause)
+			//  or not important cause data is lost either way and real resource is only the socket and other streams will just be
+			//  cleaned up when out of scope?? why not here? seems more clean
 			if (socket.isConnected) {
+				// TODO handle exception, keep exceptions from catch close by encapsulating or sth (adding to supressed excepitons list)
+				//  so they are still viewable?
 				socket.close()
 			}
 		}
+
 
 	}
 }
