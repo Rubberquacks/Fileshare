@@ -10,13 +10,15 @@ import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import kotlin.time.ExperimentalTime
 
 /**
  * A fragment representing a list of WiFi Direct Devices.
  * Activities containing this fragment MUST implement the
- * [DeviceFragment.OnListFragmentInteractionListener] interface.
+ * [WiFiDirectDeviceFragment.OnListFragmentInteractionListener] interface.
  */
-class DeviceFragment : Fragment() {
+@ExperimentalTime
+class WiFiDirectDeviceFragment : Fragment() {
 
 	private var columnCount = 1
 
@@ -41,9 +43,9 @@ class DeviceFragment : Fragment() {
 
 		// listener was set in onAttach and is the view containing this fragment, in our case the main activity
 		val mainActivity = listener as MainActivity
-		// we use that to set a reference to this fragment for the main activity to later interact with the recyclerViewAdaptor to notify it
-		// of changes to the device list
-		mainActivity.deviceFragment = this
+		// we use that to set a reference to this fragment for the main activity (notified by the broadcast receiver) to later
+		// interact with the recyclerViewAdapter to notify it of changes to the device list
+		mainActivity.wiFiDirectDeviceFragment = this
 
 		recyclerViewAdapter = WiFiDirectPeerDevicesRecyclerViewAdapter(mainActivity.wiFiDirectPeers, listener)
 
@@ -98,7 +100,7 @@ class DeviceFragment : Fragment() {
 		// TODO: Customize parameter initialization
 		@JvmStatic
 		fun newInstance(columnCount: Int) =
-			DeviceFragment().apply {
+			WiFiDirectDeviceFragment().apply {
 				arguments = Bundle().apply {
 					putInt(ARG_COLUMN_COUNT, columnCount)
 				}

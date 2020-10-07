@@ -8,14 +8,16 @@ import android.view.ViewGroup
 import android.widget.TextView
 
 
-import dev.akampf.fileshare.DeviceFragment.OnListFragmentInteractionListener
+import dev.akampf.fileshare.WiFiDirectDeviceFragment.OnListFragmentInteractionListener
 
 import kotlinx.android.synthetic.main.fragment_device.view.*
+import kotlin.time.ExperimentalTime
 
 /**
  * [RecyclerView.Adapter] that can display a [WifiP2pDevice] and makes a call to the
  * specified [OnListFragmentInteractionListener] when the representing view is clicked.
  */
+@ExperimentalTime
 class WiFiDirectPeerDevicesRecyclerViewAdapter(
 	private val mValues: List<WifiP2pDevice>,
 	private val mListener: OnListFragmentInteractionListener?

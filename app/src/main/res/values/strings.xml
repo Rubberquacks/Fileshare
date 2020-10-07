@@ -1,17 +1,30 @@
 <resources>
-    <string name="app_name">Fileshare</string>
-    <string name="wifi_direct_enabled">WiFi Direct: Enabled</string>
-    <string name="wifi_direct_disabled">WiFi Direct: Disabled</string>
+    <string name="app_name" translatable="false">Fileshare</string>
+    <string name="wifi_direct_status_enabled">Wi-Fi Direct: Enabled</string>
+    <string name="wifi_direct_status_disabled">Wi-Fi Direct: Disabled</string>
     <string name="open_file">Open File</string>
-    <string name="wifi_direct_unknown_status">WiFi Direct: Unknown Status</string>
-    <string name="wifi_direct_location_permission_denied">WiFi Direct: Location Permission denied</string>
-    <!-- First argument is the name of the device to connect and the second argument is the mac address of the device to connect-->
-    <string name="wifi_direct_connection_initiation_failed">Initiation of connection to %1$s %2$s failed with code %3$d</string>
+    <string name="wifi_direct_unknown_status">Wi-Fi Direct: Unknown Status</string>
+    <string name="wifi_direct_location_permission_denied">You have to grant Location Permission to use Wi-Fi Direct</string>
+    <!-- First argument is the name of the device to connect, second argument is the mac address of the device to connect to, third argument is the reason for the failure-->
+    <string name="wifi_direct_connection_initiation_failed">Initiation of Wi-Fi Direct connection to %1$s %2$s failed: %3$s</string>
     <!-- First argument is the network name of the created wifi direct network, the second argument is the name of the group owner and the
     third says whether or not this device is the owner of the network-->
-    <string name="wifi_direct_connection_established">Connection %1$s with owner %2$s %3$s established</string>
-    <!-- Will be to reference the own device when a connection is established with the own device as group owner-->
+    <string name="wifi_direct_connection_established">Wi-Fi Direct Connection %1$s with owner %2$s %3$s established</string>
+    <!-- Will be to describe the WiFi Direct group owner device when a connection is established with the own device as group owner-->
     <string name="wifi_direct_connection_established_this_device">(this device)</string>
-    <!-- Will be to reference the own device when a connection is established with the own device as group owner-->
+    <!-- Will be to describe the WiFi Direct group owner device when a connection is established with the other device as group owner-->
     <string name="wifi_direct_connection_established_other_device">(other device)</string>
+    <string name="wifi_direct_please_connect_first">Click on a receiver device first and wait for a successful connection</string>
+    <string name="wifi_direct_connection_lost_please_connect_again">Connection to device lost, connect again by clicking on a device</string>
+    <string name="wifi_direct_send_file_intent_service_description">Sends the requested file to the connected Wi-Fi Direct device. Keeps running in the background, so the file transfer does not cancel when one navigates away from the app.</string>
+    <string name="wifi_direct_send_file_intent_service_label">Wi-Fi Direct File Sending Service</string>
+    <string name="wifi_direct_location_mode_disabled">Enable Location Services to discover nearby Wi-Fi Direct devices</string>
+    <string name="wifi_direct_disabled_message">Enable Wi-Fi to use Wi-Fi Direct</string>
+    <string name="could_not_find_activity_to_handle_viewing_content">No installed app supports viewing this content!</string>
+    <string name="wifi_direct_data_transfer_notification_title">Sending data over Wi-Fi Direct</string>
+    <string name="wifi_direct_data_transfer_ticker_text">Sending data over Wi-Fi Direct</string>
+    <string name="data_transfer_notification_channel_name">Wi-Fi Direct Connection</string>
+    <string name="data_transfer_notification_channel_description">Displays a notification when data is currently transferred to another device.</string>
+    <string name="wifi_direct_connection_establishing_notification_message">Waiting for other device to connect to receive its IP Address...</string>
+    <string name="wifi_direct_disconnect">Disconnect</string>
 </resources>
