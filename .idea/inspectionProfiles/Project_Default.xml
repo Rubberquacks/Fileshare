@@ -1,0 +1,8 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="RedundantExplicitType" enabled="true" level="INFORMATION" enabled_by_default="true" />
+    <inspection_tool class="RedundantUnitReturnType" enabled="true" level="INFORMATION" enabled_by_default="true" />
+    <inspection_tool class="RemoveExplicitTypeArguments" enabled="true" level="INFORMATION" enabled_by_default="true" />
+  </profile>
+</component>
